@@ -1,6 +1,6 @@
 <div align="center">
 
-<img src="public/img/logo.svg" alt="cashfinch Logo" width="72" height="72" />
+<img src="img/logo.svg" alt="cashfinch Logo" width="72" height="72" />
 
 # cashfinch
 
