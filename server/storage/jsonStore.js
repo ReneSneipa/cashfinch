@@ -5,6 +5,13 @@
  *
  * Wenn ein Schlüssel im keyStore liegt, werden Datendateien
  * automatisch verschlüsselt gelesen und geschrieben (AES-256-GCM).
+ *
+ * config.json Pointer-Logik:
+ *   ./data/config.json ist immer der Einstiegspunkt (Boot-Datei).
+ *   Ist kein datenpfad gesetzt, enthält sie die vollständige Konfiguration.
+ *   Ist ein datenpfad gesetzt, enthält sie nur { datenpfad } als Pointer –
+ *   die vollständige config liegt dann unter datenpfad/config.json.
+ *   Damit wandert die config immer zusammen mit den Datendateien.
  */
 
 const fs = require('fs');
@@ -13,20 +20,36 @@ const { getKey } = require('./keyStore');
 const { encrypt, decrypt } = require('./crypto');
 
 const DEFAULT_DATA_PATH = path.join(__dirname, '../../data');
-const CONFIG_PATH = path.join(DEFAULT_DATA_PATH, 'config.json');
+const DEFAULT_CONFIG_PATH = path.join(DEFAULT_DATA_PATH, 'config.json');
 
 // Einmal-Migration: config.json von altem Speicherort (./config.json) in den data-Ordner verschieben.
 // Läuft nur wenn die neue Datei noch nicht existiert aber die alte noch vorhanden ist.
 (function migrateConfigOnce() {
   const legacyPath = path.join(__dirname, '../../config.json');
-  if (!fs.existsSync(CONFIG_PATH) && fs.existsSync(legacyPath)) {
+  if (!fs.existsSync(DEFAULT_CONFIG_PATH) && fs.existsSync(legacyPath)) {
     try {
       if (!fs.existsSync(DEFAULT_DATA_PATH)) fs.mkdirSync(DEFAULT_DATA_PATH, { recursive: true });
-      fs.copyFileSync(legacyPath, CONFIG_PATH);
+      fs.copyFileSync(legacyPath, DEFAULT_CONFIG_PATH);
       fs.unlinkSync(legacyPath);
     } catch { /* Fehler ignorieren – App startet auch ohne Migration */ }
   }
 }());
+
+/**
+ * Gibt den Pfad zur aktiven config.json zurück.
+ * Liest DEFAULT_CONFIG_PATH als Pointer: ist dort ein datenpfad gesetzt,
+ * liegt die vollständige config in datenpfad/config.json.
+ * @returns {string} Absoluter Pfad zur aktiven config.json
+ */
+function getConfigPath() {
+  try {
+    const pointer = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8'));
+    if (pointer.datenpfad && pointer.datenpfad.trim() !== '') {
+      return path.join(pointer.datenpfad.trim(), 'config.json');
+    }
+  } catch { /* ok */ }
+  return DEFAULT_CONFIG_PATH;
+}
 
 /**
  * Gibt den aktuell konfigurierten Datenpfad zurück.
@@ -34,9 +57,9 @@ const CONFIG_PATH = path.join(DEFAULT_DATA_PATH, 'config.json');
  */
 function getDataPath() {
   try {
-    const config = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8'));
-    return config.datenpfad && config.datenpfad.trim() !== ''
-      ? config.datenpfad
+    const cfg = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8'));
+    return cfg.datenpfad && cfg.datenpfad.trim() !== ''
+      ? cfg.datenpfad.trim()
       : DEFAULT_DATA_PATH;
   } catch {
     return DEFAULT_DATA_PATH;
@@ -97,7 +120,7 @@ function writeFile(filename, data) {
  */
 function readConfig() {
   try {
-    const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
+    const raw = fs.readFileSync(getConfigPath(), 'utf8');
     const cfg = JSON.parse(raw);
     return {
       datenpfad:             cfg.datenpfad ?? '',
@@ -117,14 +140,45 @@ function readConfig() {
 }
 
 /**
- * Schreibt Felder in config.json (merge, kein Überschreiben nicht-gelisteter Keys).
- * @param {{ datenpfad?: string, kontenReihenfolge?: string[], kategorienReihenfolge?: string[] }} updates
+ * Schreibt Felder in die aktive config.json (merge, kein Überschreiben nicht-gelisteter Keys).
+ * Für Datenpfad-Wechsel stattdessen migrateDatapfad() verwenden.
+ * @param {object} updates
  */
 function writeConfig(updates) {
+  const configPath = getConfigPath();
   let current = {};
-  try { current = JSON.parse(fs.readFileSync(CONFIG_PATH, 'utf8')); } catch { /* ok */ }
+  try { current = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch { /* ok */ }
   const merged = { ...current, ...updates };
-  fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), 'utf8');
+  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf8');
 }
 
-module.exports = { readFile, writeFile, getDataPath, getConfigPath: () => CONFIG_PATH, readConfig, writeConfig };
+/**
+ * Verschiebt die vollständige config.json wenn der Datenpfad geändert wird.
+ * Setzt das Pointer-Prinzip um: DEFAULT_CONFIG_PATH enthält nur { datenpfad }
+ * wenn ein custom Pfad aktiv ist; die vollständige config liegt beim Datenordner.
+ * @param {string} neuerPfad - Neuer Datenpfad (leer = Standard ./data zurücksetzen)
+ */
+function migrateDatapfad(neuerPfad) {
+  const normalizedPfad = neuerPfad ? neuerPfad.trim() : '';
+
+  // Vollständige aktuelle config lesen (aus aktuellem Speicherort)
+  let fullConfig = {};
+  try { fullConfig = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8')); } catch { /* ok */ }
+
+  if (normalizedPfad !== '') {
+    // Wechsel zu custom Datenpfad:
+    // Vollständige config (mit neuem datenpfad) in den neuen Ordner schreiben
+    const newConfigPath = path.join(normalizedPfad, 'config.json');
+    fs.writeFileSync(newConfigPath, JSON.stringify({ ...fullConfig, datenpfad: normalizedPfad }, null, 2), 'utf8');
+    // DEFAULT_CONFIG_PATH nur noch als Pointer behalten
+    if (!fs.existsSync(DEFAULT_DATA_PATH)) fs.mkdirSync(DEFAULT_DATA_PATH, { recursive: true });
+    fs.writeFileSync(DEFAULT_CONFIG_PATH, JSON.stringify({ datenpfad: normalizedPfad }, null, 2), 'utf8');
+  } else {
+    // Zurück zu Standard (./data):
+    // Vollständige config ohne datenpfad in DEFAULT_CONFIG_PATH schreiben
+    const { datenpfad: _removed, ...rest } = fullConfig;
+    fs.writeFileSync(DEFAULT_CONFIG_PATH, JSON.stringify({ ...rest, datenpfad: '' }, null, 2), 'utf8');
+  }
+}
+
+module.exports = { readFile, writeFile, getDataPath, getConfigPath, readConfig, writeConfig, migrateDatapfad };

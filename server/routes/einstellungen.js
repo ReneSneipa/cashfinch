@@ -8,7 +8,7 @@
 
 const express = require('express');
 const fs = require('fs');
-const { readConfig, writeConfig } = require('../storage/jsonStore');
+const { readConfig, writeConfig, migrateDatapfad } = require('../storage/jsonStore');
 
 const router = express.Router();
 
@@ -28,12 +28,13 @@ router.post('/', (req, res) => {
     const { datenpfad, kontenReihenfolge, kategorienReihenfolge } = req.body;
     const updates = {};
 
-    // Datenpfad: leer ist ok (= Standard ./data), sonst Pfad prüfen
+    // Datenpfad: leer ist ok (= Standard ./data), sonst Pfad prüfen + config.json migrieren
     if (datenpfad !== undefined) {
       if (datenpfad.trim() !== '' && !fs.existsSync(datenpfad.trim())) {
         return res.status(400).json({ data: null, error: `Pfad existiert nicht: ${datenpfad}` });
       }
-      updates.datenpfad = datenpfad.trim();
+      // config.json wandert mit in den neuen Ordner (Pointer-Prinzip)
+      migrateDatapfad(datenpfad);
     }
 
     if (kontenReihenfolge !== undefined) {
