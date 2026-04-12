@@ -65,7 +65,7 @@ echo.
 
 REM cashfinch-Icon erstellen
 echo  Erstelle Icon...
-node "%~dp0img\create-ico.js"
+powershell -ExecutionPolicy Bypass -File "%~dp0img\create-ico.ps1" -OutPath "%~dp0img\logo.ico"
 
 REM Desktop-Verknuepfung erstellen
 echo  Erstelle Desktop-Verknuepfung...
