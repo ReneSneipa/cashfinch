@@ -32,11 +32,22 @@ router.get('/status', (req, res) => {
     const config = readConfig();
     res.json({
       data: {
-        eingerichtet: !!config.salt,
-        gesperrt:     !isUnlocked(),
+        eingerichtet:    !!config.salt,
+        gesperrt:        !isUnlocked(),
+        encHintGesehen:  !!config.encHintGesehen,
       },
       error: null,
     });
+  } catch (err) {
+    res.status(500).json({ data: null, error: err.message });
+  }
+});
+
+/** POST /api/auth/enc-hint-gesehen – Verschlüsselungs-Hinweis als gesehen markieren */
+router.post('/enc-hint-gesehen', (req, res) => {
+  try {
+    writeConfig({ encHintGesehen: true });
+    res.json({ data: { ok: true }, error: null });
   } catch (err) {
     res.status(500).json({ data: null, error: err.message });
   }

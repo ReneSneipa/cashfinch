@@ -89,4 +89,6 @@ export const authApi = {
   lock:    ()         => request('POST', '/auth/lock'),
   /** Passwortschutz entfernen (Daten entschlüsseln) */
   remove:  (passwort) => request('POST', '/auth/remove', { passwort }),
+  /** Verschlüsselungs-Hinweis als gesehen markieren (in config.json, nicht localStorage) */
+  encHintGesehen: () => request('POST', '/auth/enc-hint-gesehen'),
 };

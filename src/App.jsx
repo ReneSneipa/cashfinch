@@ -51,8 +51,9 @@ export default function App() {
           localStorage.setItem('cashfinch_onboarding', '1');
           setShowOnboarding(true);
         }
-        // Verschlüsselungs-Vorschlag beim allerersten Start
-        if (!localStorage.getItem('cashfinch_enc_seen')) {
+        // Verschlüsselungs-Vorschlag: Flag liegt in config.json (nicht localStorage)
+        // → überlebt Neuinstallation nicht, aber Browser-Neustart schon
+        if (!status.encHintGesehen) {
           setShowEncPrompt(true);
         }
       }
@@ -61,14 +62,14 @@ export default function App() {
 
   // Verschlüsselung wurde direkt im Hinweis-Modal eingerichtet
   const handleEncEingerichtet = () => {
-    localStorage.setItem('cashfinch_enc_seen', '1');
+    authApi.encHintGesehen();   // in config.json speichern
     setShowEncPrompt(false);
     setAuthStatus({ eingerichtet: true, gesperrt: false });
   };
 
   // Nutzer wählt "Später" im Hinweis-Modal
   const handleEncSpaeter = () => {
-    localStorage.setItem('cashfinch_enc_seen', '1');
+    authApi.encHintGesehen();   // in config.json speichern
     setShowEncPrompt(false);
   };
 
