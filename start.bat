@@ -23,9 +23,9 @@ REM Abhaengigkeiten installieren falls node_modules fehlt
 if not exist node_modules (
   echo  Installiere Abhaengigkeiten ^(einmalig, bitte warten^)...
   echo.
-  npm install
+  call npm install
   echo.
 )
 
 REM App starten - Browser oeffnet sich automatisch
-npm run dev
+call npm run dev

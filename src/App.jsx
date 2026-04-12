@@ -32,27 +32,32 @@ export default function App() {
   // Auth-Status: null = noch nicht geladen, sonst { eingerichtet, gesperrt }
   const [authStatus, setAuthStatus] = useState(null);
 
-  // Onboarding nach Ersteinrichtung anzeigen
+  // Onboarding-Guide anzeigen
   const [showOnboarding, setShowOnboarding] = useState(false);
 
-  // Auth-Status beim Start und nach Änderungen laden
+  // Auth-Status beim Start laden
   useEffect(() => {
     authApi.status().then((res) => {
-      setAuthStatus(res.data ?? { eingerichtet: false, gesperrt: true });
+      const status = res.data ?? { eingerichtet: false, gesperrt: false };
+      setAuthStatus(status);
+
+      // Onboarding beim allerersten Start (kein Passwort eingerichtet + noch nicht gesehen)
+      if (!status.eingerichtet && !localStorage.getItem('cashfinch_onboarding')) {
+        localStorage.setItem('cashfinch_onboarding', '1');
+        setShowOnboarding(true);
+      }
     });
   }, []);
 
   // Zentrale Daten – einmal laden, alle Seiten profitieren
-  // onGesperrt: wird aufgerufen wenn der Server zwischenzeitlich neu gestartet wurde und der Key verloren ist
+  // onGesperrt: wird aufgerufen wenn der Server neu gestartet wurde und der Key verloren ist
   const { einnahmen, ausgaben, budgets, konten, kategorien, kontenReihenfolge, kategorienReihenfolge, laden, fehler, neu: onReload } = useFinanzDaten({
     onGesperrt: () => setAuthStatus({ eingerichtet: true, gesperrt: true }),
   });
 
-  // Nach erfolgreichem Entsperren/Einrichten: Status aktualisieren + Daten laden
-  // Bei Ersteinrichtung (modus === 'einrichten') → Onboarding zeigen
-  const handleErfolg = (warErsteinrichtung = false) => {
+  // Nach erfolgreichem Entsperren: Status aktualisieren + Daten laden
+  const handleErfolg = () => {
     setAuthStatus({ eingerichtet: true, gesperrt: false });
-    if (warErsteinrichtung) setShowOnboarding(true);
     onReload();
   };
 
@@ -107,21 +112,30 @@ export default function App() {
     }
   };
 
-  // PasswortSperre anzeigen: solange Status unbekannt, oder gesperrt, oder nicht eingerichtet
-  const zeigeSperre = !authStatus || authStatus.gesperrt || !authStatus.eingerichtet;
-  const sperrModus  = !authStatus?.eingerichtet ? 'einrichten' : 'entsperren';
+  // PasswortSperre NUR anzeigen wenn Passwort bereits eingerichtet ist aber gesperrt ist.
+  // Auf Erstinstall (eingerichtet: false) → App direkt nutzbar, kein Pflicht-Passwort.
+  const zeigeSperre = authStatus?.eingerichtet === true && authStatus?.gesperrt === true;
+
+  // Auth noch nicht geladen → kurzer Ladeindikator
+  if (!authStatus) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ color: 'var(--text-2)', fontSize: 13 }}>Starte cashfinch…</div>
+      </div>
+    );
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {/* Passwort-Overlay (sitzt über allem) */}
+      {/* Passwort-Overlay: nur wenn Passwort eingerichtet + gesperrt */}
       {zeigeSperre && (
         <PasswortSperre
-          modus={sperrModus}
-          onErfolg={() => handleErfolg(sperrModus === 'einrichten')}
+          modus="entsperren"
+          onErfolg={handleErfolg}
         />
       )}
 
-      {/* Onboarding-Guide nach Ersteinrichtung */}
+      {/* Onboarding-Guide beim allerersten Start */}
       {showOnboarding && !zeigeSperre && (
         <Onboarding
           onSeitenwechsel={setAktiveSeite}
@@ -134,7 +148,7 @@ export default function App() {
         onThemeToggle={toggleTheme}
         aktiveSeite={aktiveSeite}
         onSeitenwechsel={setAktiveSeite}
-        onLock={handleLock}
+        onLock={authStatus.eingerichtet ? handleLock : undefined}
       />
 
       <main style={{ maxWidth: 1120, margin: '0 auto', padding: '36px 32px 64px' }}>
