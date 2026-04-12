@@ -65,8 +65,8 @@ echo.
 
 REM cashfinch-Icon erstellen (nur wenn noch keine vorhanden)
 if not exist "%~dp0img\logo.ico" (
-  echo  Erstelle Icon...
-  powershell -ExecutionPolicy Bypass -File "%~dp0img\create-ico.ps1" -OutPath "%~dp0img\logo.ico"
+  echo  Erstelle Icon aus logo.png...
+  powershell -ExecutionPolicy Bypass -File "%~dp0img\make-ico.ps1"
 ) else (
   echo  Icon bereits vorhanden – wird beibehalten.
 )
