@@ -61,11 +61,8 @@ node --version
 
 ### Windows
 
-1. Repository herunterladen (grüner **Code**-Button → **Download ZIP**) oder klonen:
-   ```bash
-   git clone https://github.com/ReneSneipa/cashfinch.git
-   ```
-2. Ordner öffnen und `install.bat` doppelklicken – prüft Node.js, installiert alle Abhängigkeiten und startet die App
+1. [**Neueste Version herunterladen**](https://github.com/ReneSneipa/cashfinch/releases/latest) → `cashfinch-v1.0.0.zip` → entpacken
+2. Den Ordner `cashfinch` öffnen und `install.bat` doppelklicken
 
 ```
 📁 cashfinch/
@@ -79,16 +76,17 @@ Der Browser öffnet sich automatisch unter `http://localhost:5173`.
 
 ### macOS / Linux
 
+1. [**Neueste Version herunterladen**](https://github.com/ReneSneipa/cashfinch/releases/latest) → `Source code (tar.gz)` → entpacken
+2. Im Terminal:
 ```bash
-git clone https://github.com/ReneSneipa/cashfinch.git
-cd cashfinch
+cd cashfinch-1.0.0
 chmod +x install.sh
 ./install.sh
 ```
 
 ---
 
-### Manuell (alle Systeme)
+### Für Entwickler
 
 ```bash
 git clone https://github.com/ReneSneipa/cashfinch.git
