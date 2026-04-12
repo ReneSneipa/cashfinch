@@ -36,8 +36,15 @@ if not exist dist (
   exit /b 1
 )
 
-echo  cashfinch laeuft auf http://localhost:3000
-echo  Dieses Fenster offen lassen ^(Strg+C zum Beenden^).
+echo  cashfinch laeuft  -^>  http://localhost:3000
+echo.
+echo  ------------------------------------------------
+echo  Dieses Fenster ist der Motor von cashfinch.
+echo  Solange es offen ist, laeuft die App im Browser.
+echo.
+echo  Zum Beenden: Browser schliessen, dann hier
+echo  das Fenster schliessen oder Strg+C druecken.
+echo  ------------------------------------------------
 echo.
 
 REM Browser nach kurzer Verzoegerung oeffnen ^(im Hintergrund^)

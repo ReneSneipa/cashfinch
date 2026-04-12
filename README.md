@@ -4,7 +4,7 @@
 
 # cashfinch
 
-**Persönlicher Finanz-Überblick · lokal · verschlüsselt · kostenlos**
+**Fixkosten-Überblick · lokal · ohne Tracking · kostenlos**
 
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?logo=node.js&logoColor=white)](https://nodejs.org)
 [![React](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)](https://react.dev)
@@ -17,7 +17,17 @@
 
 cashfinch ist eine schlanke Web-App für den persönlichen Finanzüberblick – **komplett lokal auf deinem Rechner**, ohne Cloud, ohne Abo, ohne Datenweitergabe. Deine Finanzdaten können optional mit **AES-256-GCM** verschlüsselt werden und liegen nur auf deiner Festplatte.
 
-> **Ideal für:** Fixkosten im Blick behalten, Budgets planen, monatliche Ausgaben analysieren.
+> **Ideal für:** Wer wissen will, was am Ende des Monats von seinem Einkommen übrig bleibt – ohne jeden Kassenbon zu scannen.
+
+---
+
+## 💡 Warum cashfinch?
+
+Ich wollte auf einen Blick sehen, wie viel von meinem Einkommen nach allen Fixkosten noch übrig bleibt – nicht mehr, nicht weniger.
+
+Die meisten Apps wollen, dass du jede Ausgabe trackst, Belege scannst und Kategorien pflegst. Das ist mir zu viel Aufwand für zu wenig Nutzen. Meine Fixkosten ändern sich selten – ich muss sie nicht täglich im Blick haben, aber ich möchte jederzeit wissen: Was ist fix verplant, und was bleibt mir wirklich zum Leben?
+
+cashfinch beantwortet genau diese Frage. Einmal einrichten, ab und zu aktualisieren – fertig.
 
 ---
 
@@ -37,10 +47,9 @@ cashfinch ist eine schlanke Web-App für den persönlichen Finanzüberblick – 
 
 ## 📸 Screenshots
 
-<!-- Screenshots einfügen, z.B.: -->
-<!-- ![Dashboard](docs/screenshots/dashboard.png) -->
-
-*Screenshots folgen – starte die App und mach selbst welche!*
+![Dashboard](docs/screenshots/dashboard.png)
+![Ausgaben](docs/screenshots/ausgaben.png)
+![Einstellungen](docs/screenshots/einstellungen.png)
 
 ---
 
@@ -191,6 +200,6 @@ Siehe [LICENSE](LICENSE).
 
 <div align="center">
 
-**cashfinch** · lokal · verschlüsselt · Open Source
+**cashfinch** · lokal · ohne Tracking · Open Source
 
 </div>

@@ -92,4 +92,3 @@ if /i "%STARTEN%"=="j" (
 )
 
 echo.
-pause

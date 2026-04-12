@@ -1,0 +1,7 @@
+# Dateien die aus dem Release-ZIP ausgeschlossen werden (git archive export-ignore)
+# GitHub nutzt git archive für die automatisch generierten Source-Archive bei Releases.
+
+CLAUDE.md            export-ignore
+.gitignore           export-ignore
+img/logo.svg         export-ignore
+docs/                export-ignore
