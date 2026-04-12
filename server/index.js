@@ -58,12 +58,13 @@ if (IS_PROD) {
   const distPath = path.join(__dirname, '../dist');
   app.use(express.static(distPath));
 
-  // Alle nicht-API-Routen ans React SPA weiterleiten
-  app.get('*', (req, res) => {
+  // Alle nicht-API-Routen ans React SPA weiterleiten (app.use statt app.get('*') – Express 5)
+  app.use((req, res) => {
     res.sendFile(path.join(distPath, 'index.html'));
   });
 }
 
 app.listen(PORT, () => {
-  console.log(`\n  cashfinch API-Server: http://localhost:${PORT}\n  cashfinch Frontend:   http://localhost:5173\n`);
+  const url = IS_PROD ? `http://localhost:${PORT}` : `http://localhost:5173`;
+  console.log(`\n  cashfinch laeuft auf ${url}\n`);
 });
