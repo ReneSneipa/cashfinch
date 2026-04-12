@@ -602,7 +602,7 @@ function ShortcutKarte() {
 
 // ── Passwort-Abschnitt ────────────────────────────────────────────────────────
 
-function PasswortKarte() {
+function PasswortKarte({ onAuthChange }) {
   const [status, setStatus]         = useState(null); // null | { eingerichtet, gesperrt }
   const [modus, setModus]           = useState(null); // null | 'einrichten' | 'entfernen'
   const [passwort, setPasswort]     = useState('');
@@ -627,7 +627,9 @@ function PasswortKarte() {
     setLaden(false);
     if (res.error) { setFehler(res.error); return; }
     setErfolg('Passwort eingerichtet. Daten sind jetzt verschlüsselt.');
-    setStatus({ eingerichtet: true, gesperrt: false });
+    const neuerStatus = { eingerichtet: true, gesperrt: false };
+    setStatus(neuerStatus);
+    onAuthChange?.(neuerStatus);
     setModus(null);
     setPasswort(''); setBestaetigung('');
   };
@@ -640,7 +642,9 @@ function PasswortKarte() {
     setLaden(false);
     if (res.error) { setFehler(res.error); return; }
     setErfolg('Passwortschutz entfernt. Daten werden unverschlüsselt gespeichert.');
-    setStatus({ eingerichtet: false, gesperrt: false });
+    const neuerStatus = { eingerichtet: false, gesperrt: false };
+    setStatus(neuerStatus);
+    onAuthChange?.(neuerStatus);
     setModus(null);
     setPasswort('');
   };
@@ -721,7 +725,7 @@ function PasswortKarte() {
 
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
 
-export default function EinstellungenSeite({ ausgaben, konten, kategorien, kontenReihenfolge, kategorienReihenfolge, onReload }) {
+export default function EinstellungenSeite({ ausgaben, konten, kategorien, kontenReihenfolge, kategorienReihenfolge, onReload, onAuthChange }) {
   const [datenpfad, setDatenpfad] = useState('');
   const [geladen, setGeladen] = useState(false);
 
@@ -740,7 +744,7 @@ export default function EinstellungenSeite({ ausgaben, konten, kategorien, konte
       <DatenpfadKarte initialPfad={datenpfad} onSaved={onReload} />
       <KontenVerwaltungKarte konten={konten} initialReihenfolge={kontenReihenfolge} onSaved={onReload} />
       <KategorienVerwaltungKarte kategorien={kategorien} initialReihenfolge={kategorienReihenfolge} onSaved={onReload} />
-      <PasswortKarte />
+      <PasswortKarte onAuthChange={onAuthChange} />
       <ShortcutKarte />
     </>
   );

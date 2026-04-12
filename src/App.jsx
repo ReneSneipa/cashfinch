@@ -10,6 +10,7 @@ import { authApi } from './api/api.js';
 import Navbar from './components/Navbar.jsx';
 import PasswortSperre from './components/PasswortSperre.jsx';
 import Onboarding from './components/Onboarding.jsx';
+import VerschluesselungsHinweis from './components/VerschluesselungsHinweis.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import AusgabenSeite from './pages/AusgabenSeite.jsx';
 import EinnahmenSeite from './pages/EinnahmenSeite.jsx';
@@ -35,19 +36,46 @@ export default function App() {
   // Onboarding-Guide anzeigen
   const [showOnboarding, setShowOnboarding] = useState(false);
 
+  // Verschlüsselungs-Hinweis beim ersten Start anzeigen
+  const [showEncPrompt, setShowEncPrompt] = useState(false);
+
   // Auth-Status beim Start laden
   useEffect(() => {
     authApi.status().then((res) => {
       const status = res.data ?? { eingerichtet: false, gesperrt: false };
       setAuthStatus(status);
 
-      // Onboarding beim allerersten Start (kein Passwort eingerichtet + noch nicht gesehen)
-      if (!status.eingerichtet && !localStorage.getItem('cashfinch_onboarding')) {
-        localStorage.setItem('cashfinch_onboarding', '1');
-        setShowOnboarding(true);
+      if (!status.eingerichtet) {
+        // Onboarding beim allerersten Start
+        if (!localStorage.getItem('cashfinch_onboarding')) {
+          localStorage.setItem('cashfinch_onboarding', '1');
+          setShowOnboarding(true);
+        }
+        // Verschlüsselungs-Vorschlag beim allerersten Start
+        if (!localStorage.getItem('cashfinch_enc_seen')) {
+          setShowEncPrompt(true);
+        }
       }
     });
   }, []);
+
+  // Verschlüsselung wurde direkt im Hinweis-Modal eingerichtet
+  const handleEncEingerichtet = () => {
+    localStorage.setItem('cashfinch_enc_seen', '1');
+    setShowEncPrompt(false);
+    setAuthStatus({ eingerichtet: true, gesperrt: false });
+  };
+
+  // Nutzer wählt "Später" im Hinweis-Modal
+  const handleEncSpaeter = () => {
+    localStorage.setItem('cashfinch_enc_seen', '1');
+    setShowEncPrompt(false);
+  };
+
+  // Auth-Status von EinstellungenSeite aktualisieren (z.B. nach Passwort einrichten/entfernen)
+  const handleAuthChange = (neuerStatus) => {
+    setAuthStatus((prev) => ({ ...prev, ...neuerStatus }));
+  };
 
   // Zentrale Daten – einmal laden, alle Seiten profitieren
   // onGesperrt: wird aufgerufen wenn der Server neu gestartet wurde und der Key verloren ist
@@ -106,7 +134,7 @@ export default function App() {
       case 'budgets':
         return <BudgetSeite einnahmen={einnahmen} ausgaben={ausgaben} budgets={budgets} onReload={onReload} />;
       case 'einstellungen':
-        return <EinstellungenSeite ausgaben={ausgaben} konten={konten} kategorien={kategorien} kontenReihenfolge={kontenReihenfolge} kategorienReihenfolge={kategorienReihenfolge} onReload={onReload} />;
+        return <EinstellungenSeite ausgaben={ausgaben} konten={konten} kategorien={kategorien} kontenReihenfolge={kontenReihenfolge} kategorienReihenfolge={kategorienReihenfolge} onReload={onReload} onAuthChange={handleAuthChange} />;
       default:
         return null;
     }
@@ -140,6 +168,14 @@ export default function App() {
         <Onboarding
           onSeitenwechsel={setAktiveSeite}
           onFertig={() => setShowOnboarding(false)}
+        />
+      )}
+
+      {/* Verschlüsselungs-Hinweis beim allerersten Start */}
+      {showEncPrompt && !zeigeSperre && (
+        <VerschluesselungsHinweis
+          onEingerichtet={handleEncEingerichtet}
+          onSpaeter={handleEncSpaeter}
         />
       )}
 
