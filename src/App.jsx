@@ -46,13 +46,12 @@ export default function App() {
       setAuthStatus(status);
 
       if (!status.eingerichtet) {
-        // Onboarding beim allerersten Start
-        if (!localStorage.getItem('cashfinch_onboarding')) {
-          localStorage.setItem('cashfinch_onboarding', '1');
+        // Onboarding beim allerersten Start – Flag in config.json, überlebt Neuinstallation nicht
+        if (!status.onboardingGesehen) {
+          authApi.onboardingGesehen();
           setShowOnboarding(true);
         }
-        // Verschlüsselungs-Vorschlag: Flag liegt in config.json (nicht localStorage)
-        // → überlebt Neuinstallation nicht, aber Browser-Neustart schon
+        // Verschlüsselungs-Vorschlag: Flag ebenfalls in config.json
         if (!status.encHintGesehen) {
           setShowEncPrompt(true);
         }

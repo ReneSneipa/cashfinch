@@ -32,9 +32,10 @@ router.get('/status', (req, res) => {
     const config = readConfig();
     res.json({
       data: {
-        eingerichtet:    !!config.salt,
-        gesperrt:        !isUnlocked(),
-        encHintGesehen:  !!config.encHintGesehen,
+        eingerichtet:      !!config.salt,
+        gesperrt:          !isUnlocked(),
+        encHintGesehen:    !!config.encHintGesehen,
+        onboardingGesehen: !!config.onboardingGesehen,
       },
       error: null,
     });
@@ -47,6 +48,16 @@ router.get('/status', (req, res) => {
 router.post('/enc-hint-gesehen', (req, res) => {
   try {
     writeConfig({ encHintGesehen: true });
+    res.json({ data: { ok: true }, error: null });
+  } catch (err) {
+    res.status(500).json({ data: null, error: err.message });
+  }
+});
+
+/** POST /api/auth/onboarding-gesehen – Onboarding-Wizard als gesehen markieren */
+router.post('/onboarding-gesehen', (req, res) => {
+  try {
+    writeConfig({ onboardingGesehen: true });
     res.json({ data: { ok: true }, error: null });
   } catch (err) {
     res.status(500).json({ data: null, error: err.message });

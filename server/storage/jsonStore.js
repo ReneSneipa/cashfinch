@@ -87,14 +87,19 @@ function readConfig() {
     const raw = fs.readFileSync(CONFIG_PATH, 'utf8');
     const cfg = JSON.parse(raw);
     return {
-      datenpfad:            cfg.datenpfad ?? '',
-      kontenReihenfolge:    Array.isArray(cfg.kontenReihenfolge)    ? cfg.kontenReihenfolge    : [],
+      datenpfad:             cfg.datenpfad ?? '',
+      kontenReihenfolge:     Array.isArray(cfg.kontenReihenfolge)     ? cfg.kontenReihenfolge     : [],
       kategorienReihenfolge: Array.isArray(cfg.kategorienReihenfolge) ? cfg.kategorienReihenfolge : [],
-      salt:                 cfg.salt     ?? null,
-      verifier:             cfg.verifier ?? null,
+      salt:                  cfg.salt              ?? null,
+      verifier:              cfg.verifier          ?? null,
+      encHintGesehen:        cfg.encHintGesehen    ?? false,
+      onboardingGesehen:     cfg.onboardingGesehen ?? false,
     };
   } catch {
-    return { datenpfad: '', kontenReihenfolge: [], kategorienReihenfolge: [], salt: null, verifier: null };
+    return {
+      datenpfad: '', kontenReihenfolge: [], kategorienReihenfolge: [],
+      salt: null, verifier: null, encHintGesehen: false, onboardingGesehen: false,
+    };
   }
 }
 

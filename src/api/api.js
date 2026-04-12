@@ -90,5 +90,7 @@ export const authApi = {
   /** Passwortschutz entfernen (Daten entschlüsseln) */
   remove:  (passwort) => request('POST', '/auth/remove', { passwort }),
   /** Verschlüsselungs-Hinweis als gesehen markieren (in config.json, nicht localStorage) */
-  encHintGesehen: () => request('POST', '/auth/enc-hint-gesehen'),
+  encHintGesehen:    () => request('POST', '/auth/enc-hint-gesehen'),
+  /** Onboarding-Wizard als gesehen markieren (in config.json, nicht localStorage) */
+  onboardingGesehen: () => request('POST', '/auth/onboarding-gesehen'),
 };
