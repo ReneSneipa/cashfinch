@@ -70,7 +70,11 @@ function EinnahmeForm({ einnahme, onSave, onCancel, laden }) {
     if (!name.trim()) { setFehler('Bitte einen Namen eingeben.'); return; }
     if (!betrag || Number(betrag) <= 0) { setFehler('Bitte einen gültigen Betrag eingeben.'); return; }
     setFehler('');
-    await onSave({ name: name.trim(), betrag: Number(betrag), id: einnahme?.id });
+    try {
+      await onSave({ name: name.trim(), betrag: Number(betrag), id: einnahme?.id });
+    } catch (err) {
+      setFehler(err.message);
+    }
   };
 
   return (
@@ -159,12 +163,14 @@ export default function EinnahmenSeite({ einnahmen, onReload }) {
   const handleSave = useCallback(async (data) => {
     setLaden(true);
     try {
+      let result;
       if (data.id) {
         const { id, ...daten } = data;
-        await einnahmenApi.update(id, daten);
+        result = await einnahmenApi.update(id, daten);
       } else {
-        await einnahmenApi.create({ ...data, aktiv: true });
+        result = await einnahmenApi.create({ ...data, aktiv: true });
       }
+      if (result.error) throw new Error(result.error);
       await onReload();
       schliesseFormular();
     } finally {

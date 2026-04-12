@@ -151,16 +151,24 @@ export default function AusgabenFormPanel({ mode, ausgabe, konten = [], kategori
     if (!form.name.trim()) { setFehler('Bitte einen Namen eingeben.'); return; }
     if (!form.betrag || Number(form.betrag) <= 0) { setFehler('Bitte einen gültigen Betrag eingeben.'); return; }
     setFehler('');
-    await onSave({
-      ...form,
-      betrag: Number(form.betrag),
-      id: ausgabe?.id,
-    });
+    try {
+      await onSave({
+        ...form,
+        betrag: Number(form.betrag),
+        id: ausgabe?.id,
+      });
+    } catch (err) {
+      setFehler(err.message);
+    }
   };
 
   const handleDelete = async () => {
     if (!loeschenBestaetigung) { setLoeschenBestaetigung(true); return; }
-    await onDelete(ausgabe.id);
+    try {
+      await onDelete(ausgabe.id);
+    } catch (err) {
+      setFehler(err.message);
+    }
   };
 
   if (!mode) {
@@ -182,7 +190,7 @@ export default function AusgabenFormPanel({ mode, ausgabe, konten = [], kategori
   }
 
   return (
-    <div style={{ ...s.panel, position: 'relative' }}>
+    <div style={{ ...s.panel }}>
       <div style={s.highlight} />
 
       {/* Header */}
@@ -287,7 +295,7 @@ export default function AusgabenFormPanel({ mode, ausgabe, konten = [], kategori
       }}>
         <div>
           <div style={{ fontSize: 13, fontWeight: 500 }}>Geteilt</div>
-          <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 1 }}>50/50 WG-Splitting → Faktor 0,5</div>
+          <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 1 }}>Nur 50 % dieser Ausgabe anrechnen</div>
         </div>
         <div
           onClick={() => set('geteilt', !form.geteilt)}

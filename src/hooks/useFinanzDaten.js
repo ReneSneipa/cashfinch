@@ -11,7 +11,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
  * - fehler: Fehlermeldung falls vorhanden
  * - neu: Funktion zum stillen Neuladen im Hintergrund (kein laden=true)
  */
-export default function useFinanzDaten() {
+export default function useFinanzDaten({ onGesperrt } = {}) {
   const [einnahmen, setEinnahmen] = useState([]);
   const [ausgaben, setAusgaben] = useState([]);
   const [budgets, setBudgets] = useState([]);
@@ -51,7 +51,7 @@ export default function useFinanzDaten() {
       // 423 Gesperrt → PasswortSperre-Overlay übernimmt, hier still beenden
       const gesperrt = [einnahmenJson, ausgabenJson, budgetsJson, kontenJson, kategorienJson]
         .some((r) => r.error?.includes('Gesperrt'));
-      if (gesperrt) { setLaden(false); return; }
+      if (gesperrt) { setLaden(false); onGesperrt?.(); return; }
 
       if (einnahmenJson.error) throw new Error(einnahmenJson.error);
       if (ausgabenJson.error) throw new Error(ausgabenJson.error);

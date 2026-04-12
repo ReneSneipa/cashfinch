@@ -8,23 +8,23 @@ echo  cashfinch Setup
 echo  --------------------------------
 echo.
 
-:: Pruefen ob aus ZIP gestartet (package.json muss vorhanden sein)
+REM Pruefen ob aus ZIP gestartet
 if not exist "%~dp0package.json" (
   echo  FEHLER: Bitte zuerst die ZIP-Datei entpacken.
   echo.
-  echo  Rechtsklick auf ZIP -^> "Alle extrahieren"
+  echo  Rechtsklick auf ZIP -^> Alle extrahieren
   echo  Dann install.bat aus dem entpackten Ordner starten.
   echo.
   pause
   exit /b 1
 )
 
-:: Node.js pruefen
-where node >nul 2>&1
+REM Node.js pruefen
+node --version >nul 2>nul
 if errorlevel 1 (
   echo  FEHLER: Node.js wurde nicht gefunden.
   echo.
-  echo  Bitte Node.js installieren (Version 18 oder neuer):
+  echo  Bitte Node.js installieren ^(Version 18 oder neuer^):
   echo  https://nodejs.org
   echo.
   pause
@@ -35,9 +35,9 @@ for /f "tokens=*" %%i in ('node --version') do set NODE_VER=%%i
 echo  Node.js %NODE_VER% gefunden.
 echo.
 
-:: npm install
+REM npm install
 echo  Installiere Abhaengigkeiten...
-echo  (Das kann beim ersten Mal einige Minuten dauern.)
+echo  ^(Das kann beim ersten Mal einige Minuten dauern.^)
 echo.
 npm install
 if errorlevel 1 (
@@ -49,15 +49,22 @@ if errorlevel 1 (
   exit /b 1
 )
 
+REM Desktop-Verknuepfung erstellen
+echo  Erstelle Desktop-Verknuepfung...
+powershell -Command "$WS = New-Object -ComObject WScript.Shell; $sc = $WS.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\cashfinch.lnk'); $sc.TargetPath = '%~dp0start.bat'; $sc.WorkingDirectory = '%~dp0'; $sc.Description = 'cashfinch starten'; $sc.Save()"
+echo  Verknuepfung auf dem Desktop erstellt.
+echo.
+
 echo.
 echo  --------------------------------
 echo  Installation erfolgreich!
 echo  --------------------------------
 echo.
-echo  Zum Starten: start.bat doppelklicken
+echo  Zum Starten: cashfinch auf dem Desktop doppelklicken
+echo.            oder start.bat im Ordner.
 echo.
 
-set /p STARTEN="  Jetzt starten? (j/n): "
+set /p STARTEN="  Jetzt starten? ^(j/n^): "
 if /i "%STARTEN%"=="j" (
   start "" "%~dp0start.bat"
 )

@@ -69,7 +69,7 @@ function BudgetFormular({ initialDaten, onSpeichern, onAbbrechen }) {
         </label>
         <input
           style={inputStyle}
-          placeholder="z.B. WG-Together"
+          placeholder="z.B. Haushalt"
           value={name}
           onChange={(e) => { setName(e.target.value); setFehler(''); }}
           autoFocus
@@ -174,13 +174,15 @@ export default function BudgetSeite({ einnahmen, ausgaben, budgets, onReload }) 
   // ── Handler ────────────────────────────────────────────────────────────────
 
   const handleAnlegen = useCallback(async (formDaten) => {
-    await budgetsApi.create(formDaten);
+    const result = await budgetsApi.create(formDaten);
+    if (result.error) throw new Error(result.error);
     setNeuOffen(false);
     await onReload();
   }, [onReload]);
 
   const handleSpeichern = useCallback(async (id, formDaten) => {
-    await budgetsApi.update(id, formDaten);
+    const result = await budgetsApi.update(id, formDaten);
+    if (result.error) throw new Error(result.error);
     setEditId(null);
     await onReload();
   }, [onReload]);
@@ -192,7 +194,8 @@ export default function BudgetSeite({ einnahmen, ausgaben, budgets, onReload }) 
       return;
     }
     // Zweite Stufe: wirklich löschen
-    await budgetsApi.delete(id);
+    const result = await budgetsApi.delete(id);
+    if (result.error) throw new Error(result.error);
     setLoeschenId(null);
     await onReload();
   }, [loeschenId, onReload]);

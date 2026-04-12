@@ -65,5 +65,5 @@ if (IS_PROD) {
 }
 
 app.listen(PORT, () => {
-  console.log(`\n  cashfinch läuft auf http://localhost:${PORT}\n`);
+  console.log(`\n  cashfinch API-Server: http://localhost:${PORT}\n  cashfinch Frontend:   http://localhost:5173\n`);
 });

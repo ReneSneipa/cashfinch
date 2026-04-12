@@ -7,25 +7,25 @@ echo.
 echo  cashfinch wird gestartet...
 echo.
 
-:: Node.js pruefen
-where node >nul 2>&1
+REM Node.js pruefen
+node --version >nul 2>nul
 if errorlevel 1 (
-  echo  FEHLER: Node.js wurde nicht gefunden.
+  echo  FEHLER: Node.js nicht gefunden.
   echo.
-  echo  Bitte Node.js installieren (Version 18 oder neuer):
+  echo  Bitte Node.js installieren ^(Version 18 oder neuer^):
   echo  https://nodejs.org
   echo.
   pause
   exit /b 1
 )
 
-:: Abhaengigkeiten installieren falls node_modules fehlt
-if not exist "node_modules" (
-  echo  Installiere Abhaengigkeiten (einmalig, bitte warten)...
+REM Abhaengigkeiten installieren falls node_modules fehlt
+if not exist node_modules (
+  echo  Installiere Abhaengigkeiten ^(einmalig, bitte warten^)...
   echo.
   npm install
   echo.
 )
 
-:: App starten - Browser oeffnet sich automatisch
+REM App starten - Browser oeffnet sich automatisch
 npm run dev

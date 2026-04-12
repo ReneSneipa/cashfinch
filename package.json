@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "cashfinch – persönlicher Finanz-Überblick",
   "scripts": {
-    "dev": "concurrently \"nodemon server/index.js\" \"vite\"",
-    "dev:server": "nodemon server/index.js",
+    "dev": "concurrently \"nodemon --ignore config.json --ignore data/ server/index.js\" \"vite\"",
+    "dev:server": "nodemon --ignore config.json --ignore data/ server/index.js",
     "dev:client": "vite",
     "build": "vite build",
     "start": "NODE_ENV=production node server/index.js",

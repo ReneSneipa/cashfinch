@@ -583,27 +583,18 @@ function ShortcutKarte() {
   return (
     <div style={cardStyle}>
       {highlight}
-      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Desktop-Shortcut</div>
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Desktop-Verknüpfung</div>
       <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
-        cashfinch läuft lokal im Browser. So erstellst du einen bequemen Schnellstart:
+        Die <code style={{ fontFamily: 'monospace', background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>install.bat</code> legt beim ersten Start automatisch eine Verknüpfung{' '}
+        <strong style={{ color: 'var(--text)' }}>cashfinch</strong> auf dem Desktop an –
+        ein Doppelklick darauf startet cashfinch direkt.
       </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Windows – Taskleiste</div>
-          <ol style={{ fontSize: 12, color: 'var(--text-2)', paddingLeft: 18, lineHeight: 1.8 }}>
-            <li>Doppelklick auf <code style={{ fontFamily: 'monospace', background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>start.bat</code> → cashfinch öffnet sich im Browser</li>
-            <li>Im Browser-Tab: Rechtsklick auf die Adressleiste → "Seite an Taskleiste anheften"</li>
-            <li>Oder: Adressleiste-Symbol (🔒 links) auf den Desktop ziehen</li>
-          </ol>
-        </div>
-        <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Windows – Desktop-Verknüpfung</div>
-          <ol style={{ fontSize: 12, color: 'var(--text-2)', paddingLeft: 18, lineHeight: 1.8 }}>
-            <li>Rechtsklick auf Desktop → Neu → Verknüpfung</li>
-            <li>Pfad: <code style={{ fontFamily: 'monospace', background: 'var(--bg)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>cmd /c "cd /d C:\Pfad\zu\cashfinch && start.bat"</code></li>
-            <li>Name: <code style={{ fontFamily: 'monospace', background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>cashfinch</code></li>
-          </ol>
-        </div>
+      <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+        <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Verknüpfung fehlt?</div>
+        <ol style={{ fontSize: 12, color: 'var(--text-2)', paddingLeft: 18, lineHeight: 1.8 }}>
+          <li><code style={{ fontFamily: 'monospace', background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>install.bat</code> im cashfinch-Ordner nochmal ausführen – sie wird neu erstellt.</li>
+          <li>Oder: <code style={{ fontFamily: 'monospace', background: 'var(--bg)', padding: '1px 5px', borderRadius: 4 }}>start.bat</code> direkt per Doppelklick starten.</li>
+        </ol>
       </div>
     </div>
   );

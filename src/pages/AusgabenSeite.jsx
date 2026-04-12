@@ -83,12 +83,14 @@ export default function AusgabenSeite({ ausgaben, konten, kategorien, onReload }
   const handleSave = useCallback(async (formData) => {
     setLaden(true);
     try {
+      let result;
       if (formData.id) {
         const { id, ...daten } = formData;
-        await ausgabenApi.update(id, daten);
+        result = await ausgabenApi.update(id, daten);
       } else {
-        await ausgabenApi.create(formData);
+        result = await ausgabenApi.create(formData);
       }
+      if (result.error) throw new Error(result.error);
       await onReload();
       handleClose();
     } finally {
@@ -99,7 +101,8 @@ export default function AusgabenSeite({ ausgaben, konten, kategorien, onReload }
   const handleDelete = useCallback(async (id) => {
     setLaden(true);
     try {
-      await ausgabenApi.delete(id);
+      const result = await ausgabenApi.delete(id);
+      if (result.error) throw new Error(result.error);
       await onReload();
       handleClose();
     } finally {

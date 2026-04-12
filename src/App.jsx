@@ -43,7 +43,10 @@ export default function App() {
   }, []);
 
   // Zentrale Daten – einmal laden, alle Seiten profitieren
-  const { einnahmen, ausgaben, budgets, konten, kategorien, kontenReihenfolge, kategorienReihenfolge, laden, fehler, neu: onReload } = useFinanzDaten();
+  // onGesperrt: wird aufgerufen wenn der Server zwischenzeitlich neu gestartet wurde und der Key verloren ist
+  const { einnahmen, ausgaben, budgets, konten, kategorien, kontenReihenfolge, kategorienReihenfolge, laden, fehler, neu: onReload } = useFinanzDaten({
+    onGesperrt: () => setAuthStatus({ eingerichtet: true, gesperrt: true }),
+  });
 
   // Nach erfolgreichem Entsperren/Einrichten: Status aktualisieren + Daten laden
   // Bei Ersteinrichtung (modus === 'einrichten') → Onboarding zeigen
