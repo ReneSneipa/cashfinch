@@ -63,14 +63,6 @@ if errorlevel 1 (
 )
 echo.
 
-REM cashfinch-Icon erstellen (nur wenn noch keine vorhanden)
-if not exist "%~dp0img\logo.ico" (
-  echo  Erstelle Icon aus logo.png...
-  powershell -ExecutionPolicy Bypass -File "%~dp0img\make-ico.ps1"
-) else (
-  echo  Icon bereits vorhanden, wird beibehalten.
-)
-
 REM Desktop-Verknuepfung erstellen
 echo  Erstelle Desktop-Verknuepfung...
 powershell -Command "$WS = New-Object -ComObject WScript.Shell; $sc = $WS.CreateShortcut([Environment]::GetFolderPath('Desktop') + '\cashfinch.lnk'); $sc.TargetPath = '%~dp0start.bat'; $sc.WorkingDirectory = '%~dp0'; $sc.IconLocation = '%~dp0img\logo.ico, 0'; $sc.Description = 'cashfinch starten'; $sc.Save()"
