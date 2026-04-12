@@ -24,5 +24,13 @@ export default defineConfig({
     outDir: 'dist',
     // Recharts ist groß – Warnung erst ab 600 KB anzeigen
     chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        // Recharts in eigenen Chunk auslagern – Browser kann ihn separat cachen
+        manualChunks: (id) => {
+          if (id.includes('recharts') || id.includes('victory-vendor')) return 'recharts';
+        },
+      },
+    },
   },
 });
