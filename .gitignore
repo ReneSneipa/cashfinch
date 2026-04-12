@@ -1,0 +1,14 @@
+node_modules/
+dist/
+*.log
+.DS_Store
+Thumbs.db
+*.xlsx
+~$*
+.claude-terminal
+*.afdesign
+*.afdesign~lock~
+
+# Persönliche Finanzdaten – nicht in die Versionskontrolle
+data/*.json
+config.json

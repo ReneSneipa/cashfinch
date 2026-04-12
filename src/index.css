@@ -1,0 +1,65 @@
+@import "tailwindcss";
+
+/* ── Design-Tokens (Dark Mode Standard) ───────────────────────────────── */
+:root {
+  --bg: #09090b;
+  --surface: #111115;
+  --surface-2: #18181e;
+  --border: rgba(255, 255, 255, 0.07);
+  --border-strong: rgba(255, 255, 255, 0.13);
+  --text: #f2f2f7;
+  --text-2: #8e8e93;
+  --text-3: #48484a;
+  --blue: #0a84ff;
+  --blue-glow: rgba(10, 132, 255, 0.12);
+  --green: #30d158;
+  --green-glow: rgba(48, 209, 88, 0.1);
+  --red: #ff453a;
+  --orange: #ff9f0a;
+  --purple: #bf5af2;
+  --teal: #5ac8fa;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+}
+
+/* ── Light Mode Override ───────────────────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #f5f5f7;
+  --surface: #ffffff;
+  --surface-2: #f0f0f5;
+  --border: rgba(0, 0, 0, 0.07);
+  --border-strong: rgba(0, 0, 0, 0.13);
+  --text: #1c1c1e;
+  --text-2: #6e6e73;
+  --text-3: #aeaeb2;
+  --blue: #007aff;
+  --green: #28cd41;
+  --red: #ff3b30;
+}
+
+/* ── Basis ─────────────────────────────────────────────────────────────── */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Figtree', -apple-system, BlinkMacSystemFont, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  font-size: 14px;
+  line-height: 1.5;
+  transition: background 0.25s, color 0.25s;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Zahlenformat: tabellarisch (für Geldbeträge) ──────────────────────── */
+.tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Scrollbar ──────────────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--text-3); border-radius: 3px; }
