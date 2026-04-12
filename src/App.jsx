@@ -30,8 +30,11 @@ export default function App() {
   const [theme, setTheme] = useState('dark');
   const [aktiveSeite, setAktiveSeite] = useState('dashboard');
 
-  // Auth-Status: null = noch nicht geladen, sonst { eingerichtet, gesperrt }
+  // Auth-Status: null = noch nicht geladen, sonst { eingerichtet, gesperrt, ... }
   const [authStatus, setAuthStatus] = useState(null);
+
+  // Migrations-Zustand: verschlüsselte Dateien ohne config.json
+  const [migrationFehler, setMigrationFehler] = useState(null); // null | { configPfad }
 
   // Onboarding-Guide anzeigen
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -43,6 +46,14 @@ export default function App() {
   useEffect(() => {
     authApi.status().then((res) => {
       const status = res.data ?? { eingerichtet: false, gesperrt: false };
+
+      // Verschlüsselte Daten ohne config.json – vor allem anderen prüfen
+      if (status.verschluesseltOhneKonfig) {
+        setMigrationFehler({ configPfad: status.configPfad ?? '' });
+        setAuthStatus(status);
+        return;
+      }
+
       setAuthStatus(status);
 
       if (!status.eingerichtet) {
@@ -143,6 +154,41 @@ export default function App() {
   // PasswortSperre NUR anzeigen wenn Passwort bereits eingerichtet ist aber gesperrt ist.
   // Auf Erstinstall (eingerichtet: false) → App direkt nutzbar, kein Pflicht-Passwort.
   const zeigeSperre = authStatus?.eingerichtet === true && authStatus?.gesperrt === true;
+
+  // Migrations-Fehler: verschlüsselte Daten ohne config.json
+  if (migrationFehler) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
+        <div style={{ maxWidth: 520, width: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '32px 36px' }}>
+          <div style={{ fontSize: 32, marginBottom: 12 }}>🔐</div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Konfigurationsdatei fehlt</div>
+          <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 20 }}>
+            Die Datendateien sind verschlüsselt, aber die zugehörige Konfigurationsdatei wurde nicht gefunden.
+            Ohne diese Datei kann der Schlüssel nicht wiederhergestellt werden.
+          </div>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>So behebst du das Problem:</div>
+          <ol style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.8, paddingLeft: 20, marginBottom: 20 }}>
+            <li>Kopiere <code style={{ background: 'var(--bg)', padding: '1px 5px', borderRadius: 4, fontFamily: 'monospace' }}>config.json</code> aus deiner alten Installation</li>
+            <li>Lege sie hier ab:</li>
+          </ol>
+          {migrationFehler.configPfad && (
+            <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 12px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-2)', wordBreak: 'break-all', marginBottom: 20 }}>
+              {migrationFehler.configPfad}
+            </div>
+          )}
+          <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 24 }}>
+            Danach cashfinch neu starten – die App entsperrt sich wie gewohnt mit deinem Passwort.
+          </div>
+          <button
+            onClick={() => window.location.reload()}
+            style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', padding: '9px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
+          >
+            Nach dem Kopieren: Neu laden
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   // Auth noch nicht geladen → kurzer Ladeindikator
   if (!authStatus) {

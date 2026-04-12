@@ -8,9 +8,11 @@
  */
 
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const { generateSalt, deriveKey, encrypt, decrypt } = require('../storage/crypto');
 const { setKey, clearKey, isUnlocked, setSetupDone } = require('../storage/keyStore');
-const { readConfig, writeConfig, readFile, writeFile } = require('../storage/jsonStore');
+const { readConfig, writeConfig, readFile, writeFile, getDataPath, getConfigPath } = require('../storage/jsonStore');
 
 const router = express.Router();
 
@@ -30,12 +32,32 @@ const DATEN_DATEIEN = [
 router.get('/status', (req, res) => {
   try {
     const config = readConfig();
+
+    // Prüfen ob verschlüsselte Datendateien vorhanden sind, aber kein Salt (= config.json fehlt/wurde nicht mitkopiert)
+    let verschluesseltOhneKonfig = false;
+    if (!config.salt) {
+      const dataPath = getDataPath();
+      for (const datei of DATEN_DATEIEN) {
+        try {
+          const raw = fs.readFileSync(path.join(dataPath, datei), 'utf8');
+          const parsed = JSON.parse(raw);
+          if (parsed && parsed._enc === true) {
+            verschluesseltOhneKonfig = true;
+            break;
+          }
+        } catch { /* Datei nicht vorhanden oder kein valides JSON – ok */ }
+      }
+    }
+
     res.json({
       data: {
-        eingerichtet:      !!config.salt,
-        gesperrt:          !isUnlocked(),
-        encHintGesehen:    !!config.encHintGesehen,
-        onboardingGesehen: !!config.onboardingGesehen,
+        eingerichtet:            !!config.salt,
+        gesperrt:                !isUnlocked(),
+        encHintGesehen:          !!config.encHintGesehen,
+        onboardingGesehen:       !!config.onboardingGesehen,
+        verschluesseltOhneKonfig,
+        // Pfad zur config.json damit das Frontend eine hilfreiche Meldung anzeigen kann
+        ...(verschluesseltOhneKonfig && { configPfad: getConfigPath() }),
       },
       error: null,
     });

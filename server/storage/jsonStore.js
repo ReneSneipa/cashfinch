@@ -12,8 +12,21 @@ const path = require('path');
 const { getKey } = require('./keyStore');
 const { encrypt, decrypt } = require('./crypto');
 
-const CONFIG_PATH = path.join(__dirname, '../../config.json');
 const DEFAULT_DATA_PATH = path.join(__dirname, '../../data');
+const CONFIG_PATH = path.join(DEFAULT_DATA_PATH, 'config.json');
+
+// Einmal-Migration: config.json von altem Speicherort (./config.json) in den data-Ordner verschieben.
+// Läuft nur wenn die neue Datei noch nicht existiert aber die alte noch vorhanden ist.
+(function migrateConfigOnce() {
+  const legacyPath = path.join(__dirname, '../../config.json');
+  if (!fs.existsSync(CONFIG_PATH) && fs.existsSync(legacyPath)) {
+    try {
+      if (!fs.existsSync(DEFAULT_DATA_PATH)) fs.mkdirSync(DEFAULT_DATA_PATH, { recursive: true });
+      fs.copyFileSync(legacyPath, CONFIG_PATH);
+      fs.unlinkSync(legacyPath);
+    } catch { /* Fehler ignorieren – App startet auch ohne Migration */ }
+  }
+}());
 
 /**
  * Gibt den aktuell konfigurierten Datenpfad zurück.
@@ -114,4 +127,4 @@ function writeConfig(updates) {
   fs.writeFileSync(CONFIG_PATH, JSON.stringify(merged, null, 2), 'utf8');
 }
 
-module.exports = { readFile, writeFile, getDataPath, readConfig, writeConfig };
+module.exports = { readFile, writeFile, getDataPath, getConfigPath: () => CONFIG_PATH, readConfig, writeConfig };

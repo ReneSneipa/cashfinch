@@ -150,6 +150,7 @@ Alle Daten werden lokal im Ordner `data/` als JSON-Dateien gespeichert – im Kl
 
 ```
 data/
+├── config.json       ← Konfiguration & Verschlüsselungs-Parameter (Salt)
 ├── einnahmen.json    ← Einkommensquellen
 ├── ausgaben.json     ← Wiederkehrende Ausgaben
 ├── budgets.json      ← Budget-Definitionen
@@ -157,9 +158,11 @@ data/
 └── kategorien.json   ← Ausgabe-Kategorien
 ```
 
-**Alternativer Datenpfad** (z.B. für Dropbox oder NAS): In den **Einstellungen** unter *Datenspeicherung* einen anderen Ordner auswählen. Die Daten werden automatisch dorthin verschoben.
+**Alternativer Datenpfad** (z.B. für Dropbox oder NAS): In den **Einstellungen** unter *Datenspeicherung* einen anderen Ordner auswählen.
 
-> Die Datei `config.json` und alle Dateien in `data/` sind in `.gitignore` eingetragen und werden **nicht** mit Git eingecheckt.
+**Migration auf einen neuen PC:** Den gesamten `data/`-Ordner kopieren – er enthält alle Daten sowie die Verschlüsselungskonfiguration. Ohne `config.json` können verschlüsselte Daten nicht entsperrt werden; cashfinch zeigt in diesem Fall einen Hinweis mit dem genauen Zielpfad.
+
+> Alle Dateien im `data/`-Ordner sind in `.gitignore` eingetragen und werden **nicht** mit Git eingecheckt.
 
 ---
 
