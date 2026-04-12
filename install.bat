@@ -8,27 +8,24 @@ echo  cashfinch Setup
 echo  --------------------------------
 echo.
 
-:: Sicherstellen dass package.json im gleichen Ordner liegt
-:: (Fehler wenn z.B. aus einem ZIP heraus gestartet)
+:: Pruefen ob aus ZIP gestartet (package.json muss vorhanden sein)
 if not exist "%~dp0package.json" (
   echo  FEHLER: Bitte zuerst die ZIP-Datei entpacken.
   echo.
-  echo  Rechtsklick auf die ZIP-Datei -^> "Alle extrahieren"
+  echo  Rechtsklick auf ZIP -^> "Alle extrahieren"
   echo  Dann install.bat aus dem entpackten Ordner starten.
   echo.
   pause
   exit /b 1
 )
 
-:: Node.js prüfen
+:: Node.js pruefen
 where node >nul 2>&1
 if errorlevel 1 (
   echo  FEHLER: Node.js wurde nicht gefunden.
   echo.
   echo  Bitte Node.js installieren (Version 18 oder neuer):
-  echo  https://nodejs.org  --^>  LTS-Version herunterladen
-  echo.
-  echo  Nach der Installation install.bat erneut starten.
+  echo  https://nodejs.org
   echo.
   pause
   exit /b 1
@@ -46,7 +43,7 @@ npm install
 if errorlevel 1 (
   echo.
   echo  FEHLER: Installation fehlgeschlagen.
-  echo  Bitte Internetverbindung pruefen und install.bat erneut starten.
+  echo  Bitte Internetverbindung pruefen und erneut starten.
   echo.
   pause
   exit /b 1
