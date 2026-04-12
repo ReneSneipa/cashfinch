@@ -22,5 +22,7 @@ export default defineConfig({
   },
   build: {
     outDir: 'dist',
+    // Recharts ist groß – Warnung erst ab 600 KB anzeigen
+    chunkSizeWarningLimit: 600,
   },
 });
