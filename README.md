@@ -48,8 +48,17 @@ cashfinch beantwortet genau diese Frage. Einmal einrichten, ab und zu aktualisie
 ## 📸 Screenshots
 
 ![Dashboard](docs/screenshots/dashboard.png)
-![Ausgaben](docs/screenshots/ausgaben.png)
-![Einstellungen](docs/screenshots/einstellungen.png)
+
+<table>
+  <tr>
+    <td><img src="docs/screenshots/ausgaben.png" alt="Ausgaben" /></td>
+    <td><img src="docs/screenshots/einnahmen.png" alt="Einnahmen" /></td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/budgets.png" alt="Budgets" /></td>
+    <td><img src="docs/screenshots/einstellungen.png" alt="Einstellungen" /></td>
+  </tr>
+</table>
 
 ---
 
