@@ -181,4 +181,4 @@ function migrateDatapfad(neuerPfad) {
   }
 }
 
-module.exports = { readFile, writeFile, getDataPath, getConfigPath, readConfig, writeConfig, migrateDatapfad };
+module.exports = { readFile, writeFile, getDataPath, getDefaultDataPath: () => DEFAULT_DATA_PATH, getConfigPath, readConfig, writeConfig, migrateDatapfad };

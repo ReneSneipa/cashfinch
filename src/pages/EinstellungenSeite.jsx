@@ -75,11 +75,14 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
   const [pfad, setPfad] = useState(initialPfad);
   const [pruefStatus, setPruefStatus] = useState(null); // null | 'ok' | 'fehler' | 'pruefen'
   const [gespeichert, setGespeichert] = useState(false);
+  const [showDialog, setShowDialog] = useState(false); // Umzug-Dialog anzeigen
+  const [laden, setLaden] = useState(false);
   const pruefTimer = useRef(null);
 
   useEffect(() => {
     setPruefStatus(null);
     setGespeichert(false);
+    setShowDialog(false);
     if (pfad.trim() === '') return;
     clearTimeout(pruefTimer.current);
     pruefTimer.current = setTimeout(async () => {
@@ -90,9 +93,23 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
     return () => clearTimeout(pruefTimer.current);
   }, [pfad]);
 
-  const handleSave = async () => {
+  // Speichern-Button: wenn Pfad unverändert direkt speichern, sonst Dialog zeigen
+  const handleSave = () => {
     if (pruefStatus === 'fehler') return;
-    await einstellungenApi.save({ datenpfad: pfad });
+    if (pfad.trim() === initialPfad.trim()) {
+      // Keine Änderung – direkt speichern (kein Umzug nötig)
+      wechseln(false);
+      return;
+    }
+    setShowDialog(true);
+  };
+
+  // Datenpfad tatsächlich wechseln
+  const wechseln = async (dateienUmziehen) => {
+    setLaden(true);
+    setShowDialog(false);
+    await einstellungenApi.datenpfadWechseln(pfad, dateienUmziehen);
+    setLaden(false);
     setGespeichert(true);
     onSaved();
   };
@@ -117,6 +134,40 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
         <code style={{ fontFamily: 'monospace', background: 'var(--surface-2)', padding: '1px 5px', borderRadius: 4 }}>./data</code>.
         Alternativer Pfad z.B. für Dropbox oder NAS.
       </div>
+
+      {/* Umzug-Dialog */}
+      {showDialog && (
+        <div style={{
+          background: 'var(--surface-2)', border: '1px solid var(--border-strong)',
+          borderRadius: 10, padding: '16px 18px', marginBottom: 16,
+        }}>
+          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Vorhandene Daten übernehmen?</div>
+          <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 14, lineHeight: 1.6 }}>
+            Sollen die bestehenden Datendateien in den neuen Ordner kopiert werden,
+            oder möchtest du dort neu beginnen?
+          </div>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button
+              onClick={() => wechseln(true)}
+              style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}
+            >
+              Daten mitübernehmen
+            </button>
+            <button
+              onClick={() => wechseln(false)}
+              style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+            >
+              Neu beginnen
+            </button>
+            <button
+              onClick={() => setShowDialog(false)}
+              style={{ ...btnPrimary, background: 'transparent', color: 'var(--text-3)', border: '1px solid transparent', padding: '9px 10px' }}
+            >
+              Abbrechen
+            </button>
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
         <div style={{ flex: 1 }}>

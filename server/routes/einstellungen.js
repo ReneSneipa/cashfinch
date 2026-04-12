@@ -1,14 +1,19 @@
 /**
  * API-Routen für Einstellungen (config.json).
  *
- * GET  /api/einstellungen          → aktuellen Config-Stand liefern
- * POST /api/einstellungen          → Datenpfad, Konto- und/oder Kategorie-Reihenfolge speichern
+ * GET  /api/einstellungen                    → aktuellen Config-Stand liefern
+ * POST /api/einstellungen                    → Datenpfad, Konto- und/oder Kategorie-Reihenfolge speichern
+ * POST /api/einstellungen/datenpfad-wechsel  → Datenpfad wechseln, optional Datendateien mitkopieren
  * GET  /api/einstellungen/datenpfad-pruefen?pfad=... → prüfen ob Pfad existiert
  */
 
 const express = require('express');
 const fs = require('fs');
-const { readConfig, writeConfig, migrateDatapfad } = require('../storage/jsonStore');
+const path = require('path');
+const { readConfig, writeConfig, migrateDatapfad, getDataPath, getDefaultDataPath } = require('../storage/jsonStore');
+
+// Datendateien die beim Datenpfad-Wechsel kopiert werden können
+const DATEN_DATEIEN = ['einnahmen.json', 'ausgaben.json', 'budgets.json', 'konten.json', 'kategorien.json'];
 
 const router = express.Router();
 
@@ -52,6 +57,46 @@ router.post('/', (req, res) => {
     }
 
     writeConfig(updates);
+    res.json({ data: readConfig(), error: null });
+  } catch (err) {
+    res.status(500).json({ data: null, error: err.message });
+  }
+});
+
+/**
+ * POST /api/einstellungen/datenpfad-wechsel
+ * Wechselt den Datenpfad und kopiert optional alle Datendateien mit.
+ * Body: { datenpfad: string, dateienUmziehen: boolean }
+ */
+router.post('/datenpfad-wechsel', (req, res) => {
+  try {
+    const { datenpfad, dateienUmziehen } = req.body;
+    const neuerPfad = datenpfad ? datenpfad.trim() : '';
+
+    // Neuen Pfad prüfen (wenn nicht Standard)
+    if (neuerPfad !== '' && !fs.existsSync(neuerPfad)) {
+      return res.status(400).json({ data: null, error: `Pfad existiert nicht: ${neuerPfad}` });
+    }
+
+    // Datendateien kopieren wenn gewünscht
+    if (dateienUmziehen) {
+      const quellPfad = getDataPath();
+      const zielPfad  = neuerPfad !== '' ? neuerPfad : getDefaultDataPath();
+
+      if (quellPfad !== zielPfad) {
+        for (const datei of DATEN_DATEIEN) {
+          const quelle = path.join(quellPfad, datei);
+          const ziel   = path.join(zielPfad, datei);
+          if (fs.existsSync(quelle)) {
+            fs.copyFileSync(quelle, ziel);
+          }
+        }
+      }
+    }
+
+    // config.json in den neuen Ordner verschieben (Pointer-Prinzip)
+    migrateDatapfad(neuerPfad);
+
     res.json({ data: readConfig(), error: null });
   } catch (err) {
     res.status(500).json({ data: null, error: err.message });

@@ -75,6 +75,8 @@ export const einstellungenApi = {
   save: (data) => request('POST', '/einstellungen', data),
   /** Datenpfad auf Existenz prüfen */
   pruefePfad: (pfad) => request('GET', `/einstellungen/datenpfad-pruefen?pfad=${encodeURIComponent(pfad)}`),
+  /** Datenpfad wechseln – optional Datendateien in den neuen Ordner kopieren */
+  datenpfadWechseln: (datenpfad, dateienUmziehen) => request('POST', '/einstellungen/datenpfad-wechsel', { datenpfad, dateienUmziehen }),
 };
 
 // ── Auth / Passwortschutz ──────────────────────────────────────────────────────
