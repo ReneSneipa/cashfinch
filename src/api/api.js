@@ -87,4 +87,6 @@ export const authApi = {
   unlock:  (passwort) => request('POST', '/auth/unlock', { passwort }),
   /** Sperren: Schlüssel aus RAM löschen */
   lock:    ()         => request('POST', '/auth/lock'),
+  /** Passwortschutz entfernen (Daten entschlüsseln) */
+  remove:  (passwort) => request('POST', '/auth/remove', { passwort }),
 };

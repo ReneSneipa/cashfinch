@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { einstellungenApi, kontenApi, kategorienApi } from '../api/api.js';
+import { einstellungenApi, kontenApi, kategorienApi, authApi } from '../api/api.js';
 
 // ── Hilfsstile ────────────────────────────────────────────────────────────────
 
@@ -122,7 +122,7 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
         <div style={{ flex: 1 }}>
           <input
             style={inputStyle}
-            placeholder="Leer = Standard  |  z.B. C:/Users/René/Dropbox/cashfinch"
+            placeholder="Leer = Standard  |  z.B. C:\Dropbox\cashfinch"
             value={pfad}
             onChange={(e) => setPfad(e.target.value)}
           />
@@ -600,6 +600,125 @@ function ShortcutKarte() {
   );
 }
 
+// ── Passwort-Abschnitt ────────────────────────────────────────────────────────
+
+function PasswortKarte() {
+  const [status, setStatus]         = useState(null); // null | { eingerichtet, gesperrt }
+  const [modus, setModus]           = useState(null); // null | 'einrichten' | 'entfernen'
+  const [passwort, setPasswort]     = useState('');
+  const [bestaetigung, setBestaetigung] = useState('');
+  const [fehler, setFehler]         = useState('');
+  const [erfolg, setErfolg]         = useState('');
+  const [laden, setLaden]           = useState(false);
+
+  useEffect(() => {
+    authApi.status().then((res) => setStatus(res.data ?? null));
+  }, []);
+
+  const reset = () => { setPasswort(''); setBestaetigung(''); setFehler(''); setErfolg(''); setModus(null); };
+
+  const handleEinrichten = async (e) => {
+    e.preventDefault();
+    setFehler('');
+    if (passwort.length < 4) { setFehler('Mind. 4 Zeichen.'); return; }
+    if (passwort !== bestaetigung) { setFehler('Passwörter stimmen nicht überein.'); return; }
+    setLaden(true);
+    const res = await authApi.setup(passwort);
+    setLaden(false);
+    if (res.error) { setFehler(res.error); return; }
+    setErfolg('Passwort eingerichtet. Daten sind jetzt verschlüsselt.');
+    setStatus({ eingerichtet: true, gesperrt: false });
+    setModus(null);
+    setPasswort(''); setBestaetigung('');
+  };
+
+  const handleEntfernen = async (e) => {
+    e.preventDefault();
+    setFehler('');
+    setLaden(true);
+    const res = await authApi.remove(passwort);
+    setLaden(false);
+    if (res.error) { setFehler(res.error); return; }
+    setErfolg('Passwortschutz entfernt. Daten werden unverschlüsselt gespeichert.');
+    setStatus({ eingerichtet: false, gesperrt: false });
+    setModus(null);
+    setPasswort('');
+  };
+
+  if (!status) return null;
+
+  const eingerichtet = status.eingerichtet;
+
+  return (
+    <div style={cardStyle}>
+      {highlight}
+      <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Verschlüsselung</div>
+      <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
+        {eingerichtet
+          ? 'Deine Daten sind mit AES-256-GCM verschlüsselt. Das Passwort wird beim Start abgefragt.'
+          : 'Kein Passwortschutz aktiv. Daten liegen unverschlüsselt im data-Ordner.'}
+      </div>
+
+      {/* Status-Badge */}
+      {!modus && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{
+            fontSize: 11, fontWeight: 600,
+            padding: '4px 10px', borderRadius: 20,
+            background: eingerichtet ? 'rgba(48,209,88,0.1)' : 'rgba(255,159,10,0.1)',
+            color: eingerichtet ? 'var(--green)' : 'var(--yellow)',
+            border: `1px solid ${eingerichtet ? 'rgba(48,209,88,0.2)' : 'rgba(255,159,10,0.2)'}`,
+          }}>
+            {eingerichtet ? '🔒 Verschlüsselt' : '🔓 Unverschlüsselt'}
+          </div>
+          <button
+            onClick={() => { setErfolg(''); setFehler(''); setModus(eingerichtet ? 'entfernen' : 'einrichten'); }}
+            style={{ ...btnPrimary, background: eingerichtet ? 'rgba(255,69,58,0.08)' : 'var(--blue)', color: eingerichtet ? 'var(--red)' : '#fff', border: eingerichtet ? '1px solid rgba(255,69,58,0.2)' : 'none' }}
+          >
+            {eingerichtet ? 'Entfernen' : 'Einrichten'}
+          </button>
+        </div>
+      )}
+
+      {/* Erfolgshinweis */}
+      {erfolg && !modus && (
+        <div style={{ fontSize: 12, color: 'var(--green)', marginTop: 10 }}>{erfolg}</div>
+      )}
+
+      {/* Formular: Einrichten */}
+      {modus === 'einrichten' && (
+        <form onSubmit={handleEinrichten} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 2 }}>
+            Neues Passwort (mind. 4 Zeichen) – danach werden alle Daten verschlüsselt.
+          </div>
+          <input style={inputStyle} type="password" placeholder="Neues Passwort" value={passwort} onChange={(e) => { setPasswort(e.target.value); setFehler(''); }} autoComplete="new-password" />
+          <input style={inputStyle} type="password" placeholder="Passwort bestätigen" value={bestaetigung} onChange={(e) => { setBestaetigung(e.target.value); setFehler(''); }} autoComplete="new-password" />
+          {fehler && <div style={{ fontSize: 11, color: 'var(--red)' }}>{fehler}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" disabled={laden} style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}>{laden ? 'Verschlüssele…' : 'Passwort einrichten'}</button>
+            <button type="button" onClick={reset} style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>Abbrechen</button>
+          </div>
+        </form>
+      )}
+
+      {/* Formular: Entfernen */}
+      {modus === 'entfernen' && (
+        <form onSubmit={handleEntfernen} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ fontSize: 11, color: 'var(--red)', marginBottom: 2 }}>
+            Aktuelles Passwort eingeben um die Verschlüsselung zu entfernen. Daten werden danach im Klartext gespeichert.
+          </div>
+          <input style={inputStyle} type="password" placeholder="Aktuelles Passwort" value={passwort} onChange={(e) => { setPasswort(e.target.value); setFehler(''); }} autoComplete="current-password" />
+          {fehler && <div style={{ fontSize: 11, color: 'var(--red)' }}>{fehler}</div>}
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="submit" disabled={laden} style={{ ...btnPrimary, background: 'rgba(255,69,58,0.08)', color: 'var(--red)', border: '1px solid rgba(255,69,58,0.2)' }}>{laden ? 'Entschlüssele…' : 'Verschlüsselung entfernen'}</button>
+            <button type="button" onClick={reset} style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}>Abbrechen</button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
 
 export default function EinstellungenSeite({ ausgaben, konten, kategorien, kontenReihenfolge, kategorienReihenfolge, onReload }) {
@@ -621,6 +740,7 @@ export default function EinstellungenSeite({ ausgaben, konten, kategorien, konte
       <DatenpfadKarte initialPfad={datenpfad} onSaved={onReload} />
       <KontenVerwaltungKarte konten={konten} initialReihenfolge={kontenReihenfolge} onSaved={onReload} />
       <KategorienVerwaltungKarte kategorien={kategorien} initialReihenfolge={kategorienReihenfolge} onSaved={onReload} />
+      <PasswortKarte />
       <ShortcutKarte />
     </>
   );

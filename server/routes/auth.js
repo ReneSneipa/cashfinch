@@ -130,4 +130,46 @@ router.post('/lock', (req, res) => {
   res.json({ data: { gesperrt: true }, error: null });
 });
 
+/** POST /api/auth/remove – Passwortschutz entfernen (Daten entschlüsseln, Salt löschen) */
+router.post('/remove', async (req, res) => {
+  try {
+    const { passwort } = req.body;
+    const config = readConfig();
+
+    if (!config.salt || !config.verifier) {
+      return res.status(400).json({ data: null, error: 'Kein Passwort eingerichtet.' });
+    }
+
+    // Aktuelles Passwort prüfen
+    const key = await deriveKey(passwort, config.salt);
+    let plain;
+    try { plain = decrypt(key, config.verifier); } catch {
+      return res.status(401).json({ data: null, error: 'Falsches Passwort.' });
+    }
+    if (plain !== VERIFIER_PLAIN) {
+      return res.status(401).json({ data: null, error: 'Falsches Passwort.' });
+    }
+
+    // Alle Datendateien entschlüsseln und als Klartext zurückschreiben
+    for (const datei of DATEN_DATEIEN) {
+      try {
+        const daten = readFile(datei);   // liest verschlüsselt (Schlüssel noch aktiv)
+        clearKey();                       // Schlüssel vorübergehend entfernen
+        writeFile(datei, daten);          // schreibt Klartext
+        setKey(key);                      // Schlüssel zurücksetzen für nächste Datei
+      } catch { /* Datei nicht vorhanden – überspringen */ }
+    }
+
+    clearKey();
+    setSetupDone(false);
+
+    // Salt + Verifier aus config.json entfernen
+    writeConfig({ salt: null, verifier: null });
+
+    res.json({ data: { entfernt: true }, error: null });
+  } catch (err) {
+    res.status(500).json({ data: null, error: err.message });
+  }
+});
+
 module.exports = router;
