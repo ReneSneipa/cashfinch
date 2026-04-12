@@ -65,15 +65,15 @@ node --version
    ```bash
    git clone https://github.com/ReneSneipa/cashfinch.git
    ```
-2. In den Ordner wechseln und `start.bat` doppelklicken
+2. Ordner öffnen und `install.bat` doppelklicken – prüft Node.js, installiert alle Abhängigkeiten und startet die App
 
 ```
 📁 cashfinch/
-└── start.bat  ← Doppelklick!
+├── install.bat  ← Einmalig zur Erstinstallation
+└── start.bat    ← Danach zum täglichen Starten
 ```
 
 Der Browser öffnet sich automatisch unter `http://localhost:5173`.
-Beim ersten Start werden alle Abhängigkeiten automatisch installiert.
 
 ---
 
@@ -82,8 +82,8 @@ Beim ersten Start werden alle Abhängigkeiten automatisch installiert.
 ```bash
 git clone https://github.com/ReneSneipa/cashfinch.git
 cd cashfinch
-chmod +x start.sh
-./start.sh
+chmod +x install.sh
+./install.sh
 ```
 
 ---
