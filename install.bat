@@ -39,8 +39,8 @@ REM npm install
 echo  Installiere Abhaengigkeiten...
 echo  ^(Das kann beim ersten Mal einige Minuten dauern.^)
 echo.
-call npm install
-if errorlevel 1 (
+call npm install --no-audit --no-fund
+if errorlevel 2 (
   echo.
   echo  FEHLER: Installation fehlgeschlagen.
   echo  Bitte Internetverbindung pruefen und erneut starten.
@@ -68,7 +68,7 @@ if not exist "%~dp0img\logo.ico" (
   echo  Erstelle Icon aus logo.png...
   powershell -ExecutionPolicy Bypass -File "%~dp0img\make-ico.ps1"
 ) else (
-  echo  Icon bereits vorhanden – wird beibehalten.
+  echo  Icon bereits vorhanden, wird beibehalten.
 )
 
 REM Desktop-Verknuepfung erstellen
