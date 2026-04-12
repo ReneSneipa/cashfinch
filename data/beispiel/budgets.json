@@ -1,6 +1,0 @@
-[
-  { "id": "b1", "name": "Tagesgeld",    "betrag": 900, "farbe": "#0a84ff" },
-  { "id": "b2", "name": "WG-Together",  "betrag": 600, "farbe": "#5ac8fa" },
-  { "id": "b3", "name": "Freizeit",     "betrag": 300, "farbe": "#bf5af2" },
-  { "id": "b4", "name": "Rücklagen",    "betrag": 200, "farbe": "#ff9f0a" }
-]

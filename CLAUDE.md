@@ -117,6 +117,5 @@ Umrechnung auf Monat: M × 1 | Q / 3 | J / 12
 
 - Kein Code ohne begleitende Erklärung was sich ändert und warum
 - Mockup/Wireframe vor jeder neuen Seite oder größeren UI-Änderung
-- Testdaten in `data/beispiel/` – nie die echten Daten überschreiben
 - API-Endpunkte sind RESTful, JSON-Response immer mit `{ data, error }` Struktur
 - Keine externen Datenbank-Abhängigkeiten einführen
