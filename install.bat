@@ -49,6 +49,20 @@ if errorlevel 1 (
   exit /b 1
 )
 
+REM Frontend bauen
+echo  Erstelle Produktions-Build...
+echo.
+call npm run build
+if errorlevel 1 (
+  echo.
+  echo  FEHLER: Build fehlgeschlagen.
+  echo  Bitte erneut starten.
+  echo.
+  pause
+  exit /b 1
+)
+echo.
+
 REM cashfinch-Icon erstellen
 echo  Erstelle Icon...
 node "%~dp0img\create-ico.js"
