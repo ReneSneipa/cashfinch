@@ -63,7 +63,7 @@ node --version
 
 1. Repository herunterladen (grüner **Code**-Button → **Download ZIP**) oder klonen:
    ```bash
-   git clone https://github.com/DEIN_USERNAME/cashfinch.git
+   git clone https://github.com/ReneSneipa/cashfinch.git
    ```
 2. In den Ordner wechseln und `start.bat` doppelklicken
 
@@ -80,7 +80,7 @@ Beim ersten Start werden alle Abhängigkeiten automatisch installiert.
 ### macOS / Linux
 
 ```bash
-git clone https://github.com/DEIN_USERNAME/cashfinch.git
+git clone https://github.com/ReneSneipa/cashfinch.git
 cd cashfinch
 chmod +x start.sh
 ./start.sh
@@ -91,7 +91,7 @@ chmod +x start.sh
 ### Manuell (alle Systeme)
 
 ```bash
-git clone https://github.com/DEIN_USERNAME/cashfinch.git
+git clone https://github.com/ReneSneipa/cashfinch.git
 cd cashfinch
 npm install
 npm run dev
@@ -101,7 +101,7 @@ npm run dev
 
 ## 🔑 Erste Schritte
 
-1. **Passwort einrichten** – Beim ersten Start wird ein Passwort für die Datenverschlüsselung festgelegt. Dieses Passwort gibt es keine Wiederherstellung – bitte gut merken!
+1. **Passwort einrichten** – Beim ersten Start wird ein Passwort für die Datenverschlüsselung festgelegt. Für dieses Passwort gibt es keine Wiederherstellung – bitte gut merken!
 2. **Onboarding** – Ein geführter Einrichtungsassistent hilft dir dabei:
    - Einnahmen eintragen
    - Konten & Kategorien anpassen
