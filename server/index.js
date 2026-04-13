@@ -21,6 +21,7 @@ const budgetsRouter       = require('./routes/budgets');
 const einstellungenRouter = require('./routes/einstellungen');
 const kontenRouter        = require('./routes/konten');
 const kategorienRouter    = require('./routes/kategorien');
+const konsistenzRouter    = require('./routes/konsistenz');
 const authRouter          = require('./routes/auth');
 const requireUnlocked     = require('./middleware/requireUnlocked');
 
@@ -52,6 +53,7 @@ app.use('/api/budgets',       budgetsRouter);
 app.use('/api/einstellungen', einstellungenRouter);
 app.use('/api/konten',        kontenRouter);
 app.use('/api/kategorien',    kategorienRouter);
+app.use('/api/konsistenz',    konsistenzRouter);
 
 // Im Produktionsmodus das gebaute Frontend ausliefern
 if (IS_PROD) {

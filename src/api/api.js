@@ -53,18 +53,30 @@ export const budgetsApi = {
 
 // ── Konten ────────────────────────────────────────────────────────────────
 export const kontenApi = {
-  getAll: () => request('GET', '/konten'),
-  create: (data) => request('POST', '/konten', data),
-  update: (id, data) => request('PUT', `/konten/${id}`, data),
-  delete: (id) => request('DELETE', `/konten/${id}`),
+  getAll:           () => request('GET', '/konten'),
+  create:           (data) => request('POST', '/konten', data),
+  update:           (id, data) => request('PUT', `/konten/${id}`, data),
+  /** Konto löschen. mitAusgaben=true löscht auch alle Ausgaben die das Konto verwenden. */
+  delete:           (id, mitAusgaben = false) => request('DELETE', `/konten/${id}${mitAusgaben ? '?mitAusgaben=true' : ''}`),
 };
 
 // ── Kategorien ────────────────────────────────────────────────────────────
 export const kategorienApi = {
-  getAll: () => request('GET', '/kategorien'),
-  create: (data) => request('POST', '/kategorien', data),
-  update: (id, data) => request('PUT', `/kategorien/${id}`, data),
-  delete: (id) => request('DELETE', `/kategorien/${id}`),
+  getAll:           () => request('GET', '/kategorien'),
+  create:           (data) => request('POST', '/kategorien', data),
+  update:           (id, data) => request('PUT', `/kategorien/${id}`, data),
+  /** Kategorie löschen. mitAusgaben=true löscht auch alle Ausgaben die die Kategorie verwenden. */
+  delete:           (id, mitAusgaben = false) => request('DELETE', `/kategorien/${id}${mitAusgaben ? '?mitAusgaben=true' : ''}`),
+};
+
+// ── Konsistenz ────────────────────────────────────────────────────────────
+export const konsistenzApi = {
+  /** Verwaiste Referenzen prüfen (Kategorien/Konten in Ausgaben die nicht mehr existieren) */
+  pruefen:                 () => request('GET', '/konsistenz'),
+  kategorienAnlegen:       () => request('POST', '/konsistenz/kategorien/anlegen'),
+  kategorienAusgabenLoeschen: () => request('POST', '/konsistenz/kategorien/loeschen'),
+  kontenAnlegen:           () => request('POST', '/konsistenz/konten/anlegen'),
+  kontenAusgabenLoeschen:  () => request('POST', '/konsistenz/konten/loeschen'),
 };
 
 // ── Einstellungen ─────────────────────────────────────────────────────────
@@ -75,8 +87,10 @@ export const einstellungenApi = {
   save: (data) => request('POST', '/einstellungen', data),
   /** Datenpfad auf Existenz prüfen */
   pruefePfad: (pfad) => request('GET', `/einstellungen/datenpfad-pruefen?pfad=${encodeURIComponent(pfad)}`),
-  /** Datenpfad wechseln – optional Datendateien in den neuen Ordner kopieren */
-  datenpfadWechseln: (datenpfad, dateienUmziehen) => request('POST', '/einstellungen/datenpfad-wechsel', { datenpfad, dateienUmziehen }),
+  /** Datenpfad wechseln – optional Datendateien in den neuen Ordner kopieren.
+   *  vorhandeneDatenVerwenden: true → nur Pointer setzen, Daten + config.json im Ziel behalten */
+  datenpfadWechseln: (datenpfad, dateienUmziehen, vorhandeneDatenVerwenden = false) =>
+    request('POST', '/einstellungen/datenpfad-wechsel', { datenpfad, dateienUmziehen, vorhandeneDatenVerwenden }),
 };
 
 // ── Auth / Passwortschutz ──────────────────────────────────────────────────────

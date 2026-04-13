@@ -84,26 +84,38 @@ router.put('/:id', (req, res) => {
   }
 });
 
-/** DELETE /api/kategorien/:id – blockiert wenn Ausgaben die Kategorie verwenden */
+/**
+ * DELETE /api/kategorien/:id – Kategorie löschen.
+ * Query-Parameter ?mitAusgaben=true löscht zusätzlich alle Ausgaben die diese Kategorie verwenden.
+ * Ohne den Parameter wird bei vorhandenen Ausgaben ein 409 mit Anzahl zurückgegeben.
+ */
 router.delete('/:id', (req, res) => {
   try {
     const kategorien = ladeKategorien();
     const kategorie = kategorien.find((k) => k.id === req.params.id);
     if (!kategorie) return res.status(404).json({ data: null, error: 'Kategorie nicht gefunden' });
 
-    // Prüfen ob Ausgaben diese Kategorie verwenden
-    const ausgaben = readFile(AUSGABEN_FILE);
+    const ausgaben   = readFile(AUSGABEN_FILE);
     const betroffene = ausgaben.filter((a) => a.kategorie === kategorie.name);
-    if (betroffene.length > 0) {
+    const mitAusgaben = req.query.mitAusgaben === 'true';
+
+    if (betroffene.length > 0 && !mitAusgaben) {
+      // Blockieren und Anzahl zurückgeben damit das Frontend einen gezielten Hinweis zeigen kann
       return res.status(409).json({
-        data: null,
-        error: `${betroffene.length} Ausgabe${betroffene.length !== 1 ? 'n verwenden' : ' verwendet'} die Kategorie "${kategorie.name}". Bitte zuerst umbuchen.`,
+        data: { anzahl: betroffene.length, name: kategorie.name },
+        error: `${betroffene.length} Ausgabe${betroffene.length !== 1 ? 'n verwenden' : ' verwendet'} die Kategorie "${kategorie.name}".`,
       });
+    }
+
+    if (mitAusgaben && betroffene.length > 0) {
+      // Ausgaben die diese Kategorie verwenden mitlöschen
+      const ohneBetroffene = ausgaben.filter((a) => a.kategorie !== kategorie.name);
+      writeFile(AUSGABEN_FILE, ohneBetroffene);
     }
 
     const gefiltert = kategorien.filter((k) => k.id !== req.params.id);
     writeFile(FILE, gefiltert);
-    res.json({ data: { id: req.params.id }, error: null });
+    res.json({ data: { id: req.params.id, ausgabenGeloescht: mitAusgaben ? betroffene.length : 0 }, error: null });
   } catch (err) {
     res.status(500).json({ data: null, error: err.message });
   }

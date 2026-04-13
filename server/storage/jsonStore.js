@@ -157,8 +157,10 @@ function writeConfig(updates) {
  * Setzt das Pointer-Prinzip um: DEFAULT_CONFIG_PATH enthält nur { datenpfad }
  * wenn ein custom Pfad aktiv ist; die vollständige config liegt beim Datenordner.
  * @param {string} neuerPfad - Neuer Datenpfad (leer = Standard ./data zurücksetzen)
+ * @param {boolean} [behalteZielConfig=false] - Wenn true und eine config.json im Ziel
+ *   bereits existiert, wird diese nicht überschrieben (Szenario: vorhandene Daten verwenden)
  */
-function migrateDatapfad(neuerPfad) {
+function migrateDatapfad(neuerPfad, behalteZielConfig = false) {
   const normalizedPfad = neuerPfad ? neuerPfad.trim() : '';
 
   // Vollständige aktuelle config lesen (aus aktuellem Speicherort)
@@ -167,9 +169,11 @@ function migrateDatapfad(neuerPfad) {
 
   if (normalizedPfad !== '') {
     // Wechsel zu custom Datenpfad:
-    // Vollständige config (mit neuem datenpfad) in den neuen Ordner schreiben
     const newConfigPath = path.join(normalizedPfad, 'config.json');
-    fs.writeFileSync(newConfigPath, JSON.stringify({ ...fullConfig, datenpfad: normalizedPfad }, null, 2), 'utf8');
+    // config.json im Ziel nur schreiben wenn nicht bereits vorhanden (oder Überschreiben erlaubt)
+    if (!behalteZielConfig || !fs.existsSync(newConfigPath)) {
+      fs.writeFileSync(newConfigPath, JSON.stringify({ ...fullConfig, datenpfad: normalizedPfad }, null, 2), 'utf8');
+    }
     // DEFAULT_CONFIG_PATH nur noch als Pointer behalten
     if (!fs.existsSync(DEFAULT_DATA_PATH)) fs.mkdirSync(DEFAULT_DATA_PATH, { recursive: true });
     fs.writeFileSync(DEFAULT_CONFIG_PATH, JSON.stringify({ datenpfad: normalizedPfad }, null, 2), 'utf8');

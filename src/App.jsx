@@ -6,11 +6,12 @@
 
 import { useState, useEffect } from 'react';
 import useFinanzDaten from './hooks/useFinanzDaten.js';
-import { authApi } from './api/api.js';
+import { authApi, konsistenzApi } from './api/api.js';
 import Navbar from './components/Navbar.jsx';
 import PasswortSperre from './components/PasswortSperre.jsx';
 import Onboarding from './components/Onboarding.jsx';
 import VerschluesselungsHinweis from './components/VerschluesselungsHinweis.jsx';
+import KonsistenzModal from './components/KonsistenzModal.jsx';
 import Dashboard from './pages/Dashboard.jsx';
 import AusgabenSeite from './pages/AusgabenSeite.jsx';
 import EinnahmenSeite from './pages/EinnahmenSeite.jsx';
@@ -42,9 +43,22 @@ export default function App() {
   // Verschlüsselungs-Hinweis beim ersten Start anzeigen
   const [showEncPrompt, setShowEncPrompt] = useState(false);
 
+  // Konsistenz-Modal: inkonsistente Daten beim Start
+  const [showKonsistenzModal, setShowKonsistenzModal] = useState(false);
+  const [konsistenzDaten, setKonsistenzDaten] = useState(null);
+
+  /** Konsistenz-Check ausführen und bei Problemen Modal anzeigen. */
+  const pruefeKonsistenz = async () => {
+    const res = await konsistenzApi.pruefen();
+    if (res.data?.hatProbleme) {
+      setKonsistenzDaten(res.data);
+      setShowKonsistenzModal(true);
+    }
+  };
+
   // Auth-Status beim Start laden
   useEffect(() => {
-    authApi.status().then((res) => {
+    authApi.status().then(async (res) => {
       const status = res.data ?? { eingerichtet: false, gesperrt: false };
 
       // Verschlüsselte Daten ohne config.json – vor allem anderen prüfen
@@ -66,6 +80,11 @@ export default function App() {
         if (!status.encHintGesehen) {
           setShowEncPrompt(true);
         }
+      }
+
+      // Konsistenz-Check: nur wenn App zugänglich (nicht gesperrt)
+      if (!status.gesperrt && !status.verschluesseltOhneKonfig) {
+        await pruefeKonsistenz();
       }
     });
   }, []);
@@ -94,10 +113,11 @@ export default function App() {
     onGesperrt: () => setAuthStatus({ eingerichtet: true, gesperrt: true }),
   });
 
-  // Nach erfolgreichem Entsperren: Status aktualisieren + Daten laden
-  const handleErfolg = () => {
+  // Nach erfolgreichem Entsperren: Status aktualisieren + Daten laden + Konsistenz prüfen
+  const handleErfolg = async () => {
     setAuthStatus({ eingerichtet: true, gesperrt: false });
     onReload();
+    await pruefeKonsistenz();
   };
 
   // Sperren: Key aus RAM löschen + Status aktualisieren
@@ -222,6 +242,15 @@ export default function App() {
         <VerschluesselungsHinweis
           onEingerichtet={handleEncEingerichtet}
           onSpaeter={handleEncSpaeter}
+        />
+      )}
+
+      {/* Konsistenz-Modal: inkonsistente Daten (hinter allen anderen Overlays) */}
+      {showKonsistenzModal && !zeigeSperre && !showEncPrompt && konsistenzDaten && (
+        <KonsistenzModal
+          daten={konsistenzDaten}
+          onBehoben={() => { setShowKonsistenzModal(false); onReload(); }}
+          onSpaeter={() => setShowKonsistenzModal(false)}
         />
       )}
 

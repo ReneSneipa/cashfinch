@@ -9,7 +9,7 @@
  */
 
 import { useState, useEffect, useRef } from 'react';
-import { einstellungenApi, kontenApi, kategorienApi, authApi } from '../api/api.js';
+import { einstellungenApi, kontenApi, kategorienApi, konsistenzApi, authApi } from '../api/api.js';
 
 // ── Hilfsstile ────────────────────────────────────────────────────────────────
 
@@ -74,6 +74,8 @@ const btnSecondary = {
 function DatenpfadKarte({ initialPfad, onSaved }) {
   const [pfad, setPfad] = useState(initialPfad);
   const [pruefStatus, setPruefStatus] = useState(null); // null | 'ok' | 'fehler' | 'pruefen'
+  const [hatDaten, setHatDaten] = useState(false); // Zielordner enthält bereits cashfinch-Daten
+  const [hatConfig, setHatConfig] = useState(false); // Zielordner enthält eine config.json
   const [gespeichert, setGespeichert] = useState(false);
   const [showDialog, setShowDialog] = useState(false); // Umzug-Dialog anzeigen
   const [laden, setLaden] = useState(false);
@@ -81,6 +83,8 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
 
   useEffect(() => {
     setPruefStatus(null);
+    setHatDaten(false);
+    setHatConfig(false);
     setGespeichert(false);
     setShowDialog(false);
     if (pfad.trim() === '') return;
@@ -89,6 +93,8 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
       setPruefStatus('pruefen');
       const res = await einstellungenApi.pruefePfad(pfad);
       setPruefStatus(res.data?.existiert ? 'ok' : 'fehler');
+      setHatDaten(res.data?.hatDaten ?? false);
+      setHatConfig(res.data?.hatConfig ?? false);
     }, 500);
     return () => clearTimeout(pruefTimer.current);
   }, [pfad]);
@@ -98,25 +104,30 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
     if (pruefStatus === 'fehler') return;
     if (pfad.trim() === initialPfad.trim()) {
       // Keine Änderung – direkt speichern (kein Umzug nötig)
-      wechseln(false);
+      wechseln(false, false);
       return;
     }
     setShowDialog(true);
   };
 
   // Datenpfad tatsächlich wechseln
-  const wechseln = async (dateienUmziehen) => {
+  // vorhandeneDatenVerwenden: true → nur Pointer setzen, Daten + config.json im Ziel unangetastet lassen
+  const wechseln = async (dateienUmziehen, vorhandeneDatenVerwenden) => {
     setLaden(true);
     setShowDialog(false);
-    await einstellungenApi.datenpfadWechseln(pfad, dateienUmziehen);
+    await einstellungenApi.datenpfadWechseln(pfad, dateienUmziehen, vorhandeneDatenVerwenden);
     setLaden(false);
     setGespeichert(true);
-    onSaved();
+    // Datenpfad-Wechsel ist ein fundamentaler Kontextwechsel – vollständiger Reload damit
+    // Auth-Status, Daten und config.json korrekt neu eingelesen werden.
+    // Ohne Reload würde der React-State den alten Auth-Zustand behalten (z.B. kein Schloss
+    // obwohl die neue config.json Verschlüsselung eingerichtet hat).
+    setTimeout(() => window.location.reload(), 800);
   };
 
   const statusFarbe = pruefStatus === 'ok' ? 'var(--green)' : pruefStatus === 'fehler' ? 'var(--red)' : 'var(--text-3)';
   const statusText = pruefStatus === 'ok'
-    ? '✓ Pfad gefunden'
+    ? hatDaten ? '✓ Pfad gefunden – cashfinch-Daten vorhanden' : '✓ Pfad gefunden'
     : pruefStatus === 'fehler'
       ? '✗ Pfad nicht gefunden'
       : pruefStatus === 'pruefen'
@@ -135,37 +146,85 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
         Alternativer Pfad z.B. für Dropbox oder NAS.
       </div>
 
-      {/* Umzug-Dialog */}
+      {/* Umzug-Dialog – zwei Varianten je nach Zielordner-Inhalt */}
       {showDialog && (
         <div style={{
           background: 'var(--surface-2)', border: '1px solid var(--border-strong)',
           borderRadius: 10, padding: '16px 18px', marginBottom: 16,
         }}>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Vorhandene Daten übernehmen?</div>
-          <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 14, lineHeight: 1.6 }}>
-            Sollen die bestehenden Datendateien in den neuen Ordner kopiert werden,
-            oder möchtest du dort neu beginnen?
-          </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <button
-              onClick={() => wechseln(true)}
-              style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}
-            >
-              Daten mitübernehmen
-            </button>
-            <button
-              onClick={() => wechseln(false)}
-              style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
-            >
-              Neu beginnen
-            </button>
-            <button
-              onClick={() => setShowDialog(false)}
-              style={{ ...btnPrimary, background: 'transparent', color: 'var(--text-3)', border: '1px solid transparent', padding: '9px 10px' }}
-            >
-              Abbrechen
-            </button>
-          </div>
+          {hatDaten ? (
+            /* Zielordner hat bereits cashfinch-Daten → primär: vorhandene verwenden */
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Daten im Zielordner gefunden</div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: hatDaten && !hatConfig ? 10 : 14, lineHeight: 1.6 }}>
+                Dieser Ordner enthält bereits cashfinch-Dateien. Wie möchtest du fortfahren?
+              </div>
+              {/* Warnung: Daten vorhanden aber keine config.json → Salt fehlt bei Verschlüsselung */}
+              {!hatConfig && (
+                <div style={{
+                  fontSize: 11, color: 'var(--orange, #ff9f0a)', background: 'rgba(255,159,10,0.08)',
+                  border: '1px solid rgba(255,159,10,0.25)', borderRadius: 6,
+                  padding: '7px 10px', marginBottom: 14, lineHeight: 1.5,
+                }}>
+                  ⚠ Keine config.json im Zielordner gefunden. Falls deine Daten dort verschlüsselt sind,
+                  wird cashfinch sie ohne die passende config.json nicht öffnen können –
+                  kopiere sie dann manuell in den Zielordner.
+                </div>
+              )}
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => wechseln(false, true)}
+                  style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}
+                >
+                  Dort gespeicherte Daten nutzen
+                </button>
+                <button
+                  onClick={() => wechseln(true, false)}
+                  style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                >
+                  Meine aktuellen Daten dorthin kopieren
+                </button>
+                <button
+                  onClick={() => setShowDialog(false)}
+                  style={{ ...btnPrimary, background: 'transparent', color: 'var(--text-3)', border: '1px solid transparent', padding: '9px 10px' }}
+                >
+                  Abbrechen
+                </button>
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 10 }}>
+                „Meine aktuellen Daten dorthin kopieren" überschreibt die vorhandenen Dateien im Zielordner.
+              </div>
+            </>
+          ) : (
+            /* Zielordner ist leer → Daten mitnehmen oder leer starten */
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 6 }}>Neuer Datenpfad</div>
+              <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 14, lineHeight: 1.6 }}>
+                Der Zielordner enthält noch keine cashfinch-Daten.
+                Sollen deine aktuellen Daten dorthin kopiert werden?
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button
+                  onClick={() => wechseln(true, false)}
+                  style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}
+                >
+                  Aktuelle Daten dorthin kopieren
+                </button>
+                <button
+                  onClick={() => wechseln(false, false)}
+                  style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--text-2)', border: '1px solid var(--border)' }}
+                >
+                  Leer starten
+                </button>
+                <button
+                  onClick={() => setShowDialog(false)}
+                  style={{ ...btnPrimary, background: 'transparent', color: 'var(--text-3)', border: '1px solid transparent', padding: '9px 10px' }}
+                >
+                  Abbrechen
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -203,6 +262,134 @@ function DatenpfadKarte({ initialPfad, onSaved }) {
   );
 }
 
+// ── Konsistenz-Warnung ────────────────────────────────────────────────────────
+
+/**
+ * Zeigt eine Warnung wenn Ausgaben auf Kategorien oder Konten verweisen,
+ * die nicht mehr in den jeweiligen JSON-Dateien vorhanden sind.
+ * Der Nutzer kann wählen: fehlende Einträge anlegen oder verwaiste Ausgaben löschen.
+ */
+function KonsistenzWarnung({ onSaved }) {
+  const [daten, setDaten] = useState(null); // null = noch nicht geladen
+
+  const laden = async () => {
+    const res = await konsistenzApi.pruefen();
+    setDaten(res.data ?? null);
+  };
+
+  useEffect(() => { laden(); }, []);
+
+  if (!daten || !daten.hatProbleme) return null;
+
+  const handleKategorienAnlegen = async () => {
+    await konsistenzApi.kategorienAnlegen();
+    onSaved();
+    await laden();
+  };
+
+  const handleKategorienLoeschen = async () => {
+    await konsistenzApi.kategorienAusgabenLoeschen();
+    onSaved();
+    await laden();
+  };
+
+  const handleKontenAnlegen = async () => {
+    await konsistenzApi.kontenAnlegen();
+    onSaved();
+    await laden();
+  };
+
+  const handleKontenLoeschen = async () => {
+    await konsistenzApi.kontenAusgabenLoeschen();
+    onSaved();
+    await laden();
+  };
+
+  const warnStyle = {
+    background: 'rgba(255,159,10,0.07)',
+    border: '1px solid rgba(255,159,10,0.3)',
+    borderRadius: 'var(--r-lg)',
+    padding: '18px 22px',
+    marginBottom: 16,
+  };
+  const sectionStyle = { marginBottom: 14 };
+  const rowStyle = {
+    display: 'flex', alignItems: 'center', gap: 8,
+    flexWrap: 'wrap', marginTop: 10,
+  };
+
+  return (
+    <div style={warnStyle}>
+      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--orange, #ff9f0a)', marginBottom: 4 }}>
+        ⚠ Inkonsistente Daten gefunden
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 14 }}>
+        Einige Ausgaben verweisen auf Kategorien oder Konten, die nicht mehr vorhanden sind.
+      </div>
+
+      {/* Verwaiste Kategorien */}
+      {daten.verwaistKategorien.length > 0 && (
+        <div style={sectionStyle}>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Fehlende Kategorien</div>
+          {daten.verwaistKategorien.map((name) => (
+            <div key={name} style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 4 }}>
+              <span style={{
+                fontFamily: 'monospace', background: 'var(--surface-2)',
+                padding: '1px 6px', borderRadius: 4, marginRight: 6,
+              }}>{name}</span>
+              wird von {daten.anzahlProKategorie[name]} Ausgabe{daten.anzahlProKategorie[name] !== 1 ? 'n' : ''} verwendet
+            </div>
+          ))}
+          <div style={rowStyle}>
+            <button
+              onClick={handleKategorienAnlegen}
+              style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}
+            >
+              Fehlende Kategorien anlegen
+            </button>
+            <button
+              onClick={handleKategorienLoeschen}
+              style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--red)', border: '1px solid rgba(255,69,58,0.3)' }}
+            >
+              Betroffene Ausgaben löschen
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Verwaiste Konten */}
+      {daten.verwaistKonten.length > 0 && (
+        <div style={sectionStyle}>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>Fehlende Konten</div>
+          {daten.verwaistKonten.map((name) => (
+            <div key={name} style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 4 }}>
+              <span style={{
+                fontFamily: 'monospace', background: 'var(--surface-2)',
+                padding: '1px 6px', borderRadius: 4, marginRight: 6,
+              }}>{name}</span>
+              wird von {daten.anzahlProKonto[name]} Ausgabe{daten.anzahlProKonto[name] !== 1 ? 'n' : ''} verwendet
+            </div>
+          ))}
+          <div style={rowStyle}>
+            <button
+              onClick={handleKontenAnlegen}
+              style={{ ...btnPrimary, background: 'var(--blue)', color: '#fff', border: 'none' }}
+            >
+              Fehlende Konten anlegen
+            </button>
+            <button
+              onClick={handleKontenLoeschen}
+              style={{ ...btnPrimary, background: 'var(--surface-2)', color: 'var(--red)', border: '1px solid rgba(255,69,58,0.3)' }}
+            >
+              Betroffene Ausgaben löschen
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Konten-Verwaltung + Reihenfolge ──────────────────────────────────────────
 
 function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSaved }) {
@@ -211,6 +398,9 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
   const [fehler, setFehler] = useState(null);
   const [loeschenId, setLoeschenId] = useState(null);
   const [loeschFehler, setLoeschFehler] = useState({});
+
+  // Props synchronisieren wenn übergeordnete Komponente neue Daten liefert (z.B. nach onReload)
+  useEffect(() => { setKonten(initialKonten); }, [initialKonten]);
 
   // D&D Reihenfolge
   const reihenfolge = konten.map((k) => k.name);
@@ -242,13 +432,18 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
     onSaved();
   };
 
-  const handleLoeschen = async (id) => {
+  // mitAusgaben=true: Force-Delete – löscht auch alle Ausgaben die das Konto verwenden
+  const handleLoeschen = async (id, mitAusgaben = false) => {
     if (loeschenId !== id) { setLoeschenId(id); return; }
     setLoeschFehler((prev) => ({ ...prev, [id]: null }));
-    const res = await kontenApi.delete(id);
+    const res = await kontenApi.delete(id, mitAusgaben);
     if (res.error) {
-      setLoeschFehler((prev) => ({ ...prev, [id]: res.error }));
-      setLoeschenId(null);
+      // Bei 409: Anzahl betroffener Ausgaben mitliefern → "Trotzdem löschen"-Button zeigen
+      setLoeschFehler((prev) => ({
+        ...prev,
+        [id]: { text: res.error, anzahl: res.data?.anzahl ?? null },
+      }));
+      if (res.data?.anzahl == null) setLoeschenId(null); // andere Fehler: Bestätigung zurücksetzen
       return;
     }
     setKonten((prev) => prev.filter((k) => k.id !== id));
@@ -360,11 +555,23 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
               </div>
               {loeschFehler[konto.id] && (
                 <div style={{
-                  fontSize: 11, color: 'var(--red)', marginTop: 4, padding: '6px 12px',
+                  fontSize: 11, color: 'var(--red)', marginTop: 4, padding: '8px 12px',
                   background: 'rgba(255,69,58,0.06)', border: '1px solid rgba(255,69,58,0.15)',
-                  borderRadius: 6,
+                  borderRadius: 6, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
                 }}>
-                  {loeschFehler[konto.id]}
+                  <span style={{ flex: 1 }}>{loeschFehler[konto.id].text ?? loeschFehler[konto.id]}</span>
+                  {loeschFehler[konto.id].anzahl != null && (
+                    <button
+                      onClick={() => handleLoeschen(konto.id, true)}
+                      style={{
+                        background: 'var(--red)', color: '#fff', border: 'none',
+                        borderRadius: 5, padding: '3px 10px', fontSize: 11, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Trotzdem löschen ({loeschFehler[konto.id].anzahl} Ausgaben werden gelöscht)
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -407,6 +614,9 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
   const [loeschenId, setLoeschenId] = useState(null);
   const [loeschFehler, setLoeschFehler] = useState({});
 
+  // Props synchronisieren wenn übergeordnete Komponente neue Daten liefert (z.B. nach onReload)
+  useEffect(() => { setKategorien(initialKategorien); }, [initialKategorien]);
+
   // D&D Reihenfolge – analog zu KontenVerwaltungKarte
   const reihenfolge = kategorien.map((k) => k.name);
   const initialListe = [
@@ -438,13 +648,18 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
     onSaved();
   };
 
-  const handleLoeschen = async (id) => {
+  // mitAusgaben=true: Force-Delete – löscht auch alle Ausgaben die die Kategorie verwenden
+  const handleLoeschen = async (id, mitAusgaben = false) => {
     if (loeschenId !== id) { setLoeschenId(id); return; }
     setLoeschFehler((prev) => ({ ...prev, [id]: null }));
-    const res = await kategorienApi.delete(id);
+    const res = await kategorienApi.delete(id, mitAusgaben);
     if (res.error) {
-      setLoeschFehler((prev) => ({ ...prev, [id]: res.error }));
-      setLoeschenId(null);
+      // Bei 409: Anzahl betroffener Ausgaben mitliefern → "Trotzdem löschen"-Button zeigen
+      setLoeschFehler((prev) => ({
+        ...prev,
+        [id]: { text: res.error, anzahl: res.data?.anzahl ?? null },
+      }));
+      if (res.data?.anzahl == null) setLoeschenId(null); // andere Fehler: Bestätigung zurücksetzen
       return;
     }
     setKategorien((prev) => prev.filter((k) => k.id !== id));
@@ -574,11 +789,23 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
               </div>
               {loeschFehler[kat.id] && (
                 <div style={{
-                  fontSize: 11, color: 'var(--red)', marginTop: 4, padding: '6px 12px',
+                  fontSize: 11, color: 'var(--red)', marginTop: 4, padding: '8px 12px',
                   background: 'rgba(255,69,58,0.06)', border: '1px solid rgba(255,69,58,0.15)',
-                  borderRadius: 6,
+                  borderRadius: 6, display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap',
                 }}>
-                  {loeschFehler[kat.id]}
+                  <span style={{ flex: 1 }}>{loeschFehler[kat.id].text ?? loeschFehler[kat.id]}</span>
+                  {loeschFehler[kat.id].anzahl != null && (
+                    <button
+                      onClick={() => handleLoeschen(kat.id, true)}
+                      style={{
+                        background: 'var(--red)', color: '#fff', border: 'none',
+                        borderRadius: 5, padding: '3px 10px', fontSize: 11, fontWeight: 600,
+                        cursor: 'pointer', fontFamily: 'inherit', flexShrink: 0, whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Trotzdem löschen ({loeschFehler[kat.id].anzahl} Ausgaben werden gelöscht)
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -793,6 +1020,7 @@ export default function EinstellungenSeite({ ausgaben, konten, kategorien, konte
   return (
     <>
       <DatenpfadKarte initialPfad={datenpfad} onSaved={onReload} />
+      <KonsistenzWarnung onSaved={onReload} />
       <KontenVerwaltungKarte konten={konten} initialReihenfolge={kontenReihenfolge} onSaved={onReload} />
       <KategorienVerwaltungKarte kategorien={kategorien} initialReihenfolge={kategorienReihenfolge} onSaved={onReload} />
       <PasswortKarte onAuthChange={onAuthChange} />

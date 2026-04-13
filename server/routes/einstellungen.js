@@ -66,11 +66,14 @@ router.post('/', (req, res) => {
 /**
  * POST /api/einstellungen/datenpfad-wechsel
  * Wechselt den Datenpfad und kopiert optional alle Datendateien mit.
- * Body: { datenpfad: string, dateienUmziehen: boolean }
+ * Body: { datenpfad: string, dateienUmziehen: boolean, vorhandeneDatenVerwenden: boolean }
+ *
+ * dateienUmziehen:        true  → Datendateien aus aktuellem Pfad in neuen Pfad kopieren
+ * vorhandeneDatenVerwenden: true → Nur Pointer setzen, vorhandene Daten + config.json im Ziel behalten
  */
 router.post('/datenpfad-wechsel', (req, res) => {
   try {
-    const { datenpfad, dateienUmziehen } = req.body;
+    const { datenpfad, dateienUmziehen, vorhandeneDatenVerwenden } = req.body;
     const neuerPfad = datenpfad ? datenpfad.trim() : '';
 
     // Neuen Pfad prüfen (wenn nicht Standard)
@@ -78,8 +81,8 @@ router.post('/datenpfad-wechsel', (req, res) => {
       return res.status(400).json({ data: null, error: `Pfad existiert nicht: ${neuerPfad}` });
     }
 
-    // Datendateien kopieren wenn gewünscht
-    if (dateienUmziehen) {
+    // Datendateien kopieren wenn gewünscht (und nicht "vorhandene Daten verwenden")
+    if (dateienUmziehen && !vorhandeneDatenVerwenden) {
       const quellPfad = getDataPath();
       const zielPfad  = neuerPfad !== '' ? neuerPfad : getDefaultDataPath();
 
@@ -94,8 +97,10 @@ router.post('/datenpfad-wechsel', (req, res) => {
       }
     }
 
-    // config.json in den neuen Ordner verschieben (Pointer-Prinzip)
-    migrateDatapfad(neuerPfad);
+    // config.json in den neuen Ordner verschieben (Pointer-Prinzip).
+    // Bei vorhandeneDatenVerwenden: bestehende config.json im Ziel nicht überschreiben,
+    // damit Salt und andere Einstellungen der Sicherung erhalten bleiben.
+    migrateDatapfad(neuerPfad, !!vorhandeneDatenVerwenden);
 
     res.json({ data: readConfig(), error: null });
   } catch (err) {
@@ -107,10 +112,18 @@ router.post('/datenpfad-wechsel', (req, res) => {
 router.get('/datenpfad-pruefen', (req, res) => {
   const pfad = req.query.pfad ?? '';
   if (pfad.trim() === '') {
-    return res.json({ data: { existiert: true, istStandard: true }, error: null });
+    return res.json({ data: { existiert: true, istStandard: true, hatDaten: false, hatConfig: false }, error: null });
   }
-  const existiert = fs.existsSync(pfad.trim());
-  res.json({ data: { existiert, istStandard: false }, error: null });
+  const trimmed = pfad.trim();
+  const existiert = fs.existsSync(trimmed);
+  // Prüfen ob bereits cashfinch-Datendateien im Zielordner liegen (mind. eine Datei)
+  const hatDaten = existiert && DATEN_DATEIEN.some(
+    (datei) => fs.existsSync(path.join(trimmed, datei))
+  );
+  // Prüfen ob eine config.json (mit Salt) im Zielordner liegt
+  // Fehlt sie bei verschlüsselten Daten, kann cashfinch die Dateien nicht öffnen
+  const hatConfig = existiert && fs.existsSync(path.join(trimmed, 'config.json'));
+  res.json({ data: { existiert, istStandard: false, hatDaten, hatConfig }, error: null });
 });
 
 module.exports = router;
