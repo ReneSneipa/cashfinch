@@ -23,11 +23,11 @@ cashfinch ist eine schlanke Web-App für den persönlichen Finanzüberblick – 
 
 ## 💡 Warum cashfinch?
 
-Ich wollte auf einen Blick sehen, wie viel von meinem Einkommen nach allen Fixkosten noch übrig bleibt – nicht mehr, nicht weniger.
+Die meisten Budget-Apps wollen, dass du jede Ausgabe trackst, Belege scannst und Kategorien pflegst. Das ist viel Aufwand für wenig Mehrwert – vor allem wenn sich die Fixkosten kaum ändern.
 
-Die meisten Apps wollen, dass du jede Ausgabe trackst, Belege scannst und Kategorien pflegst. Das ist mir zu viel Aufwand für zu wenig Nutzen. Meine Fixkosten ändern sich selten – ich muss sie nicht täglich im Blick haben, aber ich möchte jederzeit wissen: Was ist fix verplant, und was bleibt mir wirklich zum Leben?
+cashfinch konzentriert sich auf genau diese Fixkosten: Miete, Abos, Versicherungen – alles was jeden Monat zuverlässig abgeht. Einmal eintragen und sofort wissen, was am Ende des Monats übrig bleibt.
 
-cashfinch beantwortet genau diese Frage. Einmal einrichten, ab und zu aktualisieren – fertig.
+Kein tägliches Tracking, kein Scannen – einmal einrichten, ab und zu aktualisieren, fertig.
 
 ---
 
