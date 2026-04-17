@@ -4,3 +4,4 @@
 CLAUDE.md            export-ignore
 .gitignore           export-ignore
 docs/                export-ignore
+.gsd                 export-ignore
