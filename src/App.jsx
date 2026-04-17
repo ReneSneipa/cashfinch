@@ -35,7 +35,9 @@ export default function App() {
   const [authStatus, setAuthStatus] = useState(null);
 
   // Migrations-Zustand: verschlüsselte Dateien ohne config.json
-  const [migrationFehler, setMigrationFehler] = useState(null); // null | { configPfad }
+  // existiertAberUnlesbar: config.json ist physisch da, aber gerade nicht lesbar
+  // (z.B. OneDrive-Sync) → andere Handlungsanweisung als bei "wirklich fehlt"
+  const [migrationFehler, setMigrationFehler] = useState(null); // null | { configPfad, existiertAberUnlesbar }
 
   // Onboarding-Guide anzeigen
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -63,7 +65,10 @@ export default function App() {
 
       // Verschlüsselte Daten ohne config.json – vor allem anderen prüfen
       if (status.verschluesseltOhneKonfig) {
-        setMigrationFehler({ configPfad: status.configPfad ?? '' });
+        setMigrationFehler({
+          configPfad: status.configPfad ?? '',
+          existiertAberUnlesbar: !!status.configExistiertAberUnlesbar,
+        });
         setAuthStatus(status);
         return;
       }
@@ -177,33 +182,44 @@ export default function App() {
 
   // Migrations-Fehler: verschlüsselte Daten ohne config.json
   if (migrationFehler) {
+    // Zwei Varianten: Datei existiert physisch (transienter Lesefehler) ODER wirklich weg
+    const istBlockiert = migrationFehler.existiertAberUnlesbar;
     return (
       <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
         <div style={{ maxWidth: 520, width: '100%', background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', padding: '32px 36px' }}>
-          <div style={{ fontSize: 32, marginBottom: 12 }}>🔐</div>
-          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>Konfigurationsdatei fehlt</div>
-          <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 20 }}>
-            Die Datendateien sind verschlüsselt, aber die zugehörige Konfigurationsdatei wurde nicht gefunden.
-            Ohne diese Datei kann der Schlüssel nicht wiederhergestellt werden.
+          <div style={{ fontSize: 32, marginBottom: 12 }}>{istBlockiert ? '⏳' : '🔐'}</div>
+          <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8 }}>
+            {istBlockiert ? 'Konfigurationsdatei gerade blockiert' : 'Konfigurationsdatei fehlt'}
           </div>
-          <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>So behebst du das Problem:</div>
-          <ol style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.8, paddingLeft: 20, marginBottom: 20 }}>
-            <li>Kopiere <code style={{ background: 'var(--bg)', padding: '1px 5px', borderRadius: 4, fontFamily: 'monospace' }}>config.json</code> aus deiner alten Installation</li>
-            <li>Lege sie hier ab:</li>
-          </ol>
+          <div style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 20 }}>
+            {istBlockiert
+              ? 'Die Konfigurationsdatei ist vorhanden, kann aber gerade nicht gelesen werden. Das passiert manchmal wenn OneDrive, Dropbox oder ein Virenscanner die Datei kurz sperrt. Kurz warten und neu laden reicht meistens.'
+              : 'Die Datendateien sind verschlüsselt, aber die zugehörige Konfigurationsdatei wurde nicht gefunden. Ohne diese Datei kann der Schlüssel nicht wiederhergestellt werden.'}
+          </div>
+          {!istBlockiert && (
+            <>
+              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>So behebst du das Problem:</div>
+              <ol style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.8, paddingLeft: 20, marginBottom: 20 }}>
+                <li>Kopiere <code style={{ background: 'var(--bg)', padding: '1px 5px', borderRadius: 4, fontFamily: 'monospace' }}>config.json</code> aus deiner alten Installation</li>
+                <li>Lege sie hier ab:</li>
+              </ol>
+            </>
+          )}
           {migrationFehler.configPfad && (
             <div style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 12px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-2)', wordBreak: 'break-all', marginBottom: 20 }}>
               {migrationFehler.configPfad}
             </div>
           )}
           <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, marginBottom: 24 }}>
-            Danach cashfinch neu starten – die App entsperrt sich wie gewohnt mit deinem Passwort.
+            {istBlockiert
+              ? 'Tipp: Falls der Fehler bleibt, synchronisiere OneDrive manuell oder prüfe ob die Datei online-only ist.'
+              : 'Danach cashfinch neu starten – die App entsperrt sich wie gewohnt mit deinem Passwort.'}
           </div>
           <button
             onClick={() => window.location.reload()}
             style={{ background: 'var(--accent)', color: '#fff', border: 'none', borderRadius: 'var(--r-sm)', padding: '9px 20px', fontSize: 14, fontWeight: 600, cursor: 'pointer' }}
           >
-            Nach dem Kopieren: Neu laden
+            {istBlockiert ? 'Nochmal versuchen' : 'Nach dem Kopieren: Neu laden'}
           </button>
         </div>
       </div>

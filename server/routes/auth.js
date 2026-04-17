@@ -49,6 +49,13 @@ router.get('/status', (req, res) => {
       }
     }
 
+    // Zusätzliche Diagnose: existiert die config.json physisch, ist aber nicht lesbar?
+    // (Transienter OneDrive-Sync-Fehler, EBUSY, Placeholder-Rehydration-Timeout.)
+    // Frontend kann damit zwischen "config fehlt" und "config blockiert" unterscheiden
+    // und im zweiten Fall zum erneuten Versuch raten statt zur Datei-Kopie.
+    const configPfad = getConfigPath();
+    const configExistiertAberUnlesbar = istUnlesbar(configPfad);
+
     res.json({
       data: {
         eingerichtet:            !!config.salt,
@@ -56,8 +63,9 @@ router.get('/status', (req, res) => {
         encHintGesehen:          !!config.encHintGesehen,
         onboardingGesehen:       !!config.onboardingGesehen,
         verschluesseltOhneKonfig,
+        configExistiertAberUnlesbar,
         // Pfad zur config.json damit das Frontend eine hilfreiche Meldung anzeigen kann
-        ...(verschluesseltOhneKonfig && { configPfad: getConfigPath() }),
+        ...(verschluesseltOhneKonfig && { configPfad }),
       },
       error: null,
     });
@@ -65,6 +73,23 @@ router.get('/status', (req, res) => {
     res.status(500).json({ data: null, error: err.message });
   }
 });
+
+/**
+ * Prüft ob eine Datei existiert aber aktuell nicht lesbar ist.
+ * Gibt true zurück bei transienten Lesefehlern (EBUSY, EIO, OneDrive-Hydration),
+ * false bei ENOENT oder erfolgreichen Reads.
+ * @param {string} pfad - Absoluter Dateipfad
+ * @returns {boolean} true = existiert, aber readFileSync schlägt fehl
+ */
+function istUnlesbar(pfad) {
+  try {
+    fs.readFileSync(pfad, 'utf8');
+    return false; // lesbar – also nicht das Problem
+  } catch (err) {
+    // ENOENT = existiert nicht → kein „unlesbar"-Fall
+    return err.code !== 'ENOENT';
+  }
+}
 
 /** POST /api/auth/enc-hint-gesehen – Verschlüsselungs-Hinweis als gesehen markieren */
 router.post('/enc-hint-gesehen', (req, res) => {

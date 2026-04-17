@@ -22,6 +22,62 @@ const { encrypt, decrypt } = require('./crypto');
 const DEFAULT_DATA_PATH = path.join(__dirname, '../../data');
 const DEFAULT_CONFIG_PATH = path.join(DEFAULT_DATA_PATH, 'config.json');
 
+// ── Retry-Layer für transiente Dateisystem-Fehler ────────────────────────────
+// OneDrive, Dropbox, Virenscanner und Netzlaufwerke produzieren während Sync
+// kurzzeitig EBUSY/EIO/EPERM. Ein einfacher Retry mit kurzem Backoff genügt
+// in fast allen Fällen um die Störung auszusitzen.
+
+/**
+ * Transiente Fehlercodes die einen Retry rechtfertigen.
+ * ENOENT (nicht vorhanden) ist KEIN transienter Fehler und wird sofort propagiert.
+ */
+const TRANSIENT_ERRORS = new Set(['EBUSY', 'EIO', 'EPERM', 'EACCES', 'ETXTBSY', 'UNKNOWN']);
+
+/**
+ * Synchroner Sleep via SharedArrayBuffer. Blockiert den Event Loop kurz (ms-Bereich);
+ * nur innerhalb des Retry-Loops verwendet – das Gesamt-I/O bleibt schnell.
+ * @param {number} ms - Millisekunden
+ */
+function sleepSync(ms) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+}
+
+/**
+ * Führt eine Dateisystem-Operation aus und wiederholt bei transienten Fehlern.
+ * Nicht-transiente Fehler (ENOENT, SyntaxError, …) werden sofort propagiert.
+ * @template T
+ * @param {() => T} operation - Dateisystem-Operation (sync)
+ * @param {{attempts?: number, delaysMs?: number[]}} [opts]
+ * @returns {T}
+ */
+function retryOnTransient(operation, opts = {}) {
+  const attempts = opts.attempts ?? 3;
+  const delaysMs = opts.delaysMs ?? [0, 50, 150];
+  let lastErr;
+  for (let i = 0; i < attempts; i++) {
+    // Vor jedem Folge-Versuch kurz pausieren damit Sync-Client Zeit hat sich zu beruhigen
+    if (i > 0) sleepSync(delaysMs[i - 1] ?? 100);
+    try {
+      return operation();
+    } catch (err) {
+      // Nur bei echten transienten Codes weiter versuchen
+      if (!err || !TRANSIENT_ERRORS.has(err.code)) throw err;
+      lastErr = err;
+    }
+  }
+  throw lastErr;
+}
+
+/** Lesen mit Retry – bevorzugt gegenüber fs.readFileSync in diesem Modul. */
+function readFileSyncResilient(pfad, encoding = 'utf8') {
+  return retryOnTransient(() => fs.readFileSync(pfad, encoding));
+}
+
+/** Schreiben mit Retry – bevorzugt gegenüber fs.writeFileSync in diesem Modul. */
+function writeFileSyncResilient(pfad, content, encoding = 'utf8') {
+  retryOnTransient(() => fs.writeFileSync(pfad, content, encoding));
+}
+
 // Einmal-Migration: config.json von altem Speicherort (./config.json) in den data-Ordner verschieben.
 // Läuft nur wenn die neue Datei noch nicht existiert aber die alte noch vorhanden ist.
 (function migrateConfigOnce() {
@@ -43,7 +99,7 @@ const DEFAULT_CONFIG_PATH = path.join(DEFAULT_DATA_PATH, 'config.json');
  */
 function getConfigPath() {
   try {
-    const pointer = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8'));
+    const pointer = JSON.parse(readFileSyncResilient(DEFAULT_CONFIG_PATH));
     if (pointer.datenpfad && pointer.datenpfad.trim() !== '') {
       return path.join(pointer.datenpfad.trim(), 'config.json');
     }
@@ -57,7 +113,7 @@ function getConfigPath() {
  */
 function getDataPath() {
   try {
-    const cfg = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8'));
+    const cfg = JSON.parse(readFileSyncResilient(getConfigPath()));
     return cfg.datenpfad && cfg.datenpfad.trim() !== ''
       ? cfg.datenpfad.trim()
       : DEFAULT_DATA_PATH;
@@ -76,7 +132,7 @@ function getDataPath() {
 function readFile(filename) {
   const filePath = path.join(getDataPath(), filename);
   if (!fs.existsSync(filePath)) return [];
-  const raw = fs.readFileSync(filePath, 'utf8');
+  const raw = readFileSyncResilient(filePath);
   const parsed = JSON.parse(raw);
 
   if (parsed && parsed._enc === true) {
@@ -106,10 +162,10 @@ function writeFile(filename, data) {
   if (key) {
     // Verschlüsselt speichern
     const envelope = encrypt(key, JSON.stringify(data, null, 2));
-    fs.writeFileSync(filePath, JSON.stringify({ _enc: true, ...envelope }, null, 2), 'utf8');
+    writeFileSyncResilient(filePath, JSON.stringify({ _enc: true, ...envelope }, null, 2));
   } else {
     // Kein Passwort gesetzt – Klartext
-    fs.writeFileSync(filePath, JSON.stringify(data, null, 2), 'utf8');
+    writeFileSyncResilient(filePath, JSON.stringify(data, null, 2));
   }
 }
 
@@ -120,7 +176,7 @@ function writeFile(filename, data) {
  */
 function readConfig() {
   try {
-    const raw = fs.readFileSync(getConfigPath(), 'utf8');
+    const raw = readFileSyncResilient(getConfigPath());
     const cfg = JSON.parse(raw);
     return {
       datenpfad:             cfg.datenpfad ?? '',
@@ -140,16 +196,37 @@ function readConfig() {
 }
 
 /**
+ * Liest eine config.json sicher ein.
+ * Existiert die Datei NICHT, wird ein leeres Objekt zurückgegeben.
+ * Existiert sie aber ist UNLESBAR (z.B. transienter OneDrive-Sync-Fehler,
+ * Placeholder-Rehydration-Timeout, EBUSY), wird ein Fehler geworfen
+ * statt die Config stillschweigend mit einem leeren Objekt zu ersetzen.
+ * Verhindert Datenverlust (Salt/Verifier/Reihenfolgen) beim nächsten Write.
+ * @param {string} configPath - Absoluter Pfad zur config.json
+ * @returns {object} Die geparste Config oder {} wenn die Datei nicht existiert
+ */
+function readConfigStrict(configPath) {
+  if (!fs.existsSync(configPath)) return {};
+  // Existiert – muss also lesbar und valide sein. Retry schluckt transiente Störungen,
+  // danach gemeldete Fehler sind echt und sollen propagieren.
+  const raw = readFileSyncResilient(configPath);
+  return JSON.parse(raw);
+}
+
+/**
  * Schreibt Felder in die aktive config.json (merge, kein Überschreiben nicht-gelisteter Keys).
  * Für Datenpfad-Wechsel stattdessen migrateDatapfad() verwenden.
  * @param {object} updates
+ * @throws {Error} Wenn existierende config.json nicht gelesen werden kann
+ *   (schützt vor Datenverlust durch transiente Lesefehler auf OneDrive/Netzlaufwerken)
  */
 function writeConfig(updates) {
   const configPath = getConfigPath();
-  let current = {};
-  try { current = JSON.parse(fs.readFileSync(configPath, 'utf8')); } catch { /* ok */ }
+  // Bestehende Config strikt einlesen – bei Lesefehler lieber abbrechen
+  // als Salt/Verifier/Reihenfolgen blind zu überschreiben.
+  const current = readConfigStrict(configPath);
   const merged = { ...current, ...updates };
-  fs.writeFileSync(configPath, JSON.stringify(merged, null, 2), 'utf8');
+  writeFileSyncResilient(configPath, JSON.stringify(merged, null, 2));
 }
 
 /**
@@ -163,26 +240,32 @@ function writeConfig(updates) {
 function migrateDatapfad(neuerPfad, behalteZielConfig = false) {
   const normalizedPfad = neuerPfad ? neuerPfad.trim() : '';
 
-  // Vollständige aktuelle config lesen (aus aktuellem Speicherort)
-  let fullConfig = {};
-  try { fullConfig = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8')); } catch { /* ok */ }
+  // Vollständige aktuelle config strikt einlesen – bei Lesefehler
+  // einer existierenden Datei abbrechen, damit Salt/Verifier/Reihenfolgen
+  // nicht durch eine transiente OneDrive-/Netzwerk-Störung verloren gehen.
+  const fullConfig = readConfigStrict(getConfigPath());
 
   if (normalizedPfad !== '') {
     // Wechsel zu custom Datenpfad:
     const newConfigPath = path.join(normalizedPfad, 'config.json');
     // config.json im Ziel nur schreiben wenn nicht bereits vorhanden (oder Überschreiben erlaubt)
     if (!behalteZielConfig || !fs.existsSync(newConfigPath)) {
-      fs.writeFileSync(newConfigPath, JSON.stringify({ ...fullConfig, datenpfad: normalizedPfad }, null, 2), 'utf8');
+      writeFileSyncResilient(newConfigPath, JSON.stringify({ ...fullConfig, datenpfad: normalizedPfad }, null, 2));
     }
     // DEFAULT_CONFIG_PATH nur noch als Pointer behalten
     if (!fs.existsSync(DEFAULT_DATA_PATH)) fs.mkdirSync(DEFAULT_DATA_PATH, { recursive: true });
-    fs.writeFileSync(DEFAULT_CONFIG_PATH, JSON.stringify({ datenpfad: normalizedPfad }, null, 2), 'utf8');
+    writeFileSyncResilient(DEFAULT_CONFIG_PATH, JSON.stringify({ datenpfad: normalizedPfad }, null, 2));
   } else {
     // Zurück zu Standard (./data):
     // Vollständige config ohne datenpfad in DEFAULT_CONFIG_PATH schreiben
     const { datenpfad: _removed, ...rest } = fullConfig;
-    fs.writeFileSync(DEFAULT_CONFIG_PATH, JSON.stringify({ ...rest, datenpfad: '' }, null, 2), 'utf8');
+    writeFileSyncResilient(DEFAULT_CONFIG_PATH, JSON.stringify({ ...rest, datenpfad: '' }, null, 2));
   }
 }
 
-module.exports = { readFile, writeFile, getDataPath, getDefaultDataPath: () => DEFAULT_DATA_PATH, getConfigPath, readConfig, writeConfig, migrateDatapfad };
+module.exports = {
+  readFile, writeFile, getDataPath, getDefaultDataPath: () => DEFAULT_DATA_PATH,
+  getConfigPath, readConfig, writeConfig, migrateDatapfad,
+  // Für Tests exportiert – nicht Teil der öffentlichen API
+  _internals: { retryOnTransient, TRANSIENT_ERRORS },
+};
