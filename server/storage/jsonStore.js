@@ -57,13 +57,15 @@ function getConfigPath() {
  */
 function getDataPath() {
   try {
-    const cfg = JSON.parse(fs.readFileSync(getConfigPath(), 'utf8'));
-    return cfg.datenpfad && cfg.datenpfad.trim() !== ''
-      ? cfg.datenpfad.trim()
-      : DEFAULT_DATA_PATH;
-  } catch {
-    return DEFAULT_DATA_PATH;
-  }
+    // Immer den lokalen Pointer lesen – nicht die synced config.
+    // Der Pointer ist OS-spezifisch und enthält den korrekten Pfad für diese Maschine.
+    // So funktioniert Cross-OS-Sync (z.B. OneDrive) ohne Pfad-Konflikte.
+    const pointer = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8'));
+    if (pointer.datenpfad && pointer.datenpfad.trim() !== '') {
+      return pointer.datenpfad.trim();
+    }
+  } catch { /* ok */ }
+  return DEFAULT_DATA_PATH;
 }
 
 /**
@@ -122,8 +124,15 @@ function readConfig() {
   try {
     const raw = fs.readFileSync(getConfigPath(), 'utf8');
     const cfg = JSON.parse(raw);
+    // datenpfad immer aus dem lokalen Pointer lesen (OS-spezifisch),
+    // nicht aus der ggf. synchronisierten config im Datenordner.
+    let datenpfad = '';
+    try {
+      const pointer = JSON.parse(fs.readFileSync(DEFAULT_CONFIG_PATH, 'utf8'));
+      datenpfad = pointer.datenpfad ?? '';
+    } catch { /* ok */ }
     return {
-      datenpfad:             cfg.datenpfad ?? '',
+      datenpfad,
       kontenReihenfolge:     Array.isArray(cfg.kontenReihenfolge)     ? cfg.kontenReihenfolge     : [],
       kategorienReihenfolge: Array.isArray(cfg.kategorienReihenfolge) ? cfg.kategorienReihenfolge : [],
       salt:                  cfg.salt              ?? null,
@@ -172,7 +181,10 @@ function migrateDatapfad(neuerPfad, behalteZielConfig = false) {
     const newConfigPath = path.join(normalizedPfad, 'config.json');
     // config.json im Ziel nur schreiben wenn nicht bereits vorhanden (oder Überschreiben erlaubt)
     if (!behalteZielConfig || !fs.existsSync(newConfigPath)) {
-      fs.writeFileSync(newConfigPath, JSON.stringify({ ...fullConfig, datenpfad: normalizedPfad }, null, 2), 'utf8');
+      // datenpfad NICHT in die synced config schreiben – er ist OS-spezifisch
+      // und gehört nur in den lokalen Pointer (DEFAULT_CONFIG_PATH).
+      const { datenpfad: _dp, ...sharedConfig } = fullConfig;
+      fs.writeFileSync(newConfigPath, JSON.stringify({ ...sharedConfig, datenpfad: '' }, null, 2), 'utf8');
     }
     // DEFAULT_CONFIG_PATH nur noch als Pointer behalten
     if (!fs.existsSync(DEFAULT_DATA_PATH)) fs.mkdirSync(DEFAULT_DATA_PATH, { recursive: true });
