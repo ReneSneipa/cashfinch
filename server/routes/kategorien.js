@@ -66,19 +66,41 @@ router.post('/', (req, res) => {
   }
 });
 
-/** PUT /api/kategorien/:id */
+/** PUT /api/kategorien/:id – Kategorie bearbeiten (Name/Farbe). Kaskadiert Namensaenderungen in alle Ausgaben. */
 router.put('/:id', (req, res) => {
   try {
     const kategorien = ladeKategorien();
     const idx = kategorien.findIndex((k) => k.id === req.params.id);
     if (idx === -1) return res.status(404).json({ data: null, error: 'Kategorie nicht gefunden' });
+
+    const alterName = kategorien[idx].name;
+    const neuerName = req.body.name ? req.body.name.trim() : alterName;
+
+    // Duplikat-Check bei Namensaenderung (case-insensitive, nicht gegen sich selbst)
+    if (req.body.name && alterName.toLowerCase() !== neuerName.toLowerCase() &&
+        kategorien.some((k) => k.name.toLowerCase() === neuerName.toLowerCase())) {
+      return res.status(409).json({ data: null, error: `Kategorie "${neuerName}" existiert bereits` });
+    }
+
     kategorien[idx] = {
       ...kategorien[idx],
-      ...(req.body.name ? { name: req.body.name.trim() } : {}),
+      ...(req.body.name ? { name: neuerName } : {}),
       ...(req.body.farbe ? { farbe: req.body.farbe } : {}),
     };
     writeFile(FILE, kategorien);
-    res.json({ data: kategorien[idx], error: null });
+
+    // Kaskade: alten Namen in allen Ausgaben durch den neuen ersetzen
+    let ausgabenAktualisiert = 0;
+    if (alterName !== neuerName) {
+      const ausgaben = readFile(AUSGABEN_FILE);
+      const aktualisiert = ausgaben.map((a) => {
+        if (a.kategorie === alterName) { ausgabenAktualisiert++; return { ...a, kategorie: neuerName }; }
+        return a;
+      });
+      if (ausgabenAktualisiert > 0) writeFile(AUSGABEN_FILE, aktualisiert);
+    }
+
+    res.json({ data: { ...kategorien[idx], ausgabenAktualisiert }, error: null });
   } catch (err) {
     res.status(500).json({ data: null, error: err.message });
   }

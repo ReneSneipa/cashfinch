@@ -7,6 +7,7 @@ import { formatBetrag } from '../utils/formatierung.js';
 import {
   berechneGesamteinnahmen,
   berechneGesamtkosten,
+  berechneEffektiveKosten,
 } from '../utils/berechnungen.js';
 
 const cardBase = {
@@ -27,9 +28,10 @@ const CardHighlight = () => (
   }} />
 );
 
-export default function SummaryCards({ einnahmen, ausgaben }) {
+export default function SummaryCards({ einnahmen, ausgaben, konten = [] }) {
   const gesamtEinnahmen = berechneGesamteinnahmen(einnahmen);
-  const gesamtKosten = berechneGesamtkosten(ausgaben);
+  const berechnet = berechneGesamtkosten(ausgaben);
+  const gesamtKosten = konten.length > 0 ? berechneEffektiveKosten(ausgaben, konten) : berechnet;
   const verbleibend = gesamtEinnahmen - gesamtKosten;
   const anteilKosten = gesamtEinnahmen > 0
     ? ((gesamtKosten / gesamtEinnahmen) * 100).toFixed(1)

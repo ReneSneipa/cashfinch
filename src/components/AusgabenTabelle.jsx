@@ -3,7 +3,7 @@
  * Spalten: Name | Konto | Kategorie | Rhythmus | Betrag | /Monat
  *
  * Zwei Sortiermodi:
- *   "standard" → Konto (asc) → Kategorie (asc) → /Monat (desc)
+ *   "standard" → Kategorie (asc) → Konto (asc) → /Monat (desc)
  *                Konto-Reihenfolge wird in M6 per Einstellungen (Drag & Drop) konfigurierbar.
  *   "custom"   → Klick auf Spalte (asc/desc toggle)
  *
@@ -62,24 +62,12 @@ const SORTIERER = {
 };
 
 /**
- * Standard-Sortierung: Konto (per kontenReihenfolge) → Kategorie (per kategorienReihenfolge) → /Monat (desc).
+ * Standard-Sortierung: Kategorie (per kategorienReihenfolge) → Konto (per kontenReihenfolge) → /Monat (desc).
  * Beide Reihenfolgen stammen aus den Einstellungen (Drag & Drop).
  * Fallback: alphabetisch wenn keine Reihenfolge konfiguriert.
  */
 function standardSortierung(a, b, kontenReihenfolge, kategorienReihenfolge) {
-  // 1. Konto
-  if (kontenReihenfolge.length > 0) {
-    const pA = kontenReihenfolge.indexOf(a.konto ?? '');
-    const pB = kontenReihenfolge.indexOf(b.konto ?? '');
-    const posA = pA === -1 ? 9999 : pA;
-    const posB = pB === -1 ? 9999 : pB;
-    if (posA !== posB) return posA - posB;
-  } else {
-    const kontoVergl = (a.konto ?? '').localeCompare(b.konto ?? '', 'de');
-    if (kontoVergl !== 0) return kontoVergl;
-  }
-
-  // 2. Kategorie
+  // 1. Kategorie
   if (kategorienReihenfolge.length > 0) {
     const pA = kategorienReihenfolge.indexOf(a.kategorie ?? '');
     const pB = kategorienReihenfolge.indexOf(b.kategorie ?? '');
@@ -89,6 +77,18 @@ function standardSortierung(a, b, kontenReihenfolge, kategorienReihenfolge) {
   } else {
     const katVergl = (a.kategorie ?? '').localeCompare(b.kategorie ?? '', 'de');
     if (katVergl !== 0) return katVergl;
+  }
+
+  // 2. Konto
+  if (kontenReihenfolge.length > 0) {
+    const pA = kontenReihenfolge.indexOf(a.konto ?? '');
+    const pB = kontenReihenfolge.indexOf(b.konto ?? '');
+    const posA = pA === -1 ? 9999 : pA;
+    const posB = pB === -1 ? 9999 : pB;
+    if (posA !== posB) return posA - posB;
+  } else {
+    const kontoVergl = (a.konto ?? '').localeCompare(b.konto ?? '', 'de');
+    if (kontoVergl !== 0) return kontoVergl;
   }
 
   // 3. /Monat absteigend
@@ -109,10 +109,10 @@ function sortiereAusgaben(liste, modus, spalte, richtung, kontenReihenfolge, kat
 // ── Sortierbarer Tabellenkopf ─────────────────────────────────────────────────
 
 /**
- * Im Standard-Modus: alle drei Sortierspalten (Konto¹, Kategorie², /Monat³) dezent
+ * Im Standard-Modus: alle drei Sortierspalten (Kategorie¹, Konto², /Monat³) dezent
  * mit ihrer Priorität markiert. Im Custom-Modus: nur die aktive Spalte blau + Pfeil.
  */
-const STANDARD_PRIO = { konto: '¹↑', kategorie: '²↑', monat: '³↓' };
+const STANDARD_PRIO = { kategorie: '¹↑', konto: '²↑', monat: '³↓' };
 
 function SortTh({ children, spalte, modus, aktiveSpalte, richtung, onChange, rechtsbündig }) {
   const istCustomAktiv = modus === 'custom' && spalte === aktiveSpalte;
@@ -215,7 +215,7 @@ export default function AusgabenTabelle({ ausgaben, kategorien = [], kontenReihe
         {/* Standard-Button */}
         <button
           onClick={handleStandard}
-          title="Konto → Kategorie → /Monat"
+          title="Kategorie → Konto → /Monat"
           style={{
             fontSize: 11, fontWeight: 600,
             background: modus === 'standard' ? 'rgba(10,132,255,0.1)' : 'var(--surface-2)',

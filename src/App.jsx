@@ -157,13 +157,13 @@ export default function App() {
 
     switch (aktiveSeite) {
       case 'dashboard':
-        return <Dashboard einnahmen={einnahmen} ausgaben={ausgaben} budgets={budgets} kategorien={kategorien} kontenReihenfolge={kontenReihenfolge} kategorienReihenfolge={kategorienReihenfolge} />;
+        return <Dashboard einnahmen={einnahmen} ausgaben={ausgaben} budgets={budgets} konten={konten} kategorien={kategorien} kontenReihenfolge={kontenReihenfolge} kategorienReihenfolge={kategorienReihenfolge} onUpdate={onReload} />;
       case 'ausgaben':
         return <AusgabenSeite ausgaben={ausgaben} konten={konten} kategorien={kategorien} onReload={onReload} />;
       case 'einnahmen':
         return <EinnahmenSeite einnahmen={einnahmen} onReload={onReload} />;
       case 'budgets':
-        return <BudgetSeite einnahmen={einnahmen} ausgaben={ausgaben} budgets={budgets} onReload={onReload} />;
+        return <BudgetSeite einnahmen={einnahmen} ausgaben={ausgaben} budgets={budgets} konten={konten} onReload={onReload} />;
       case 'einstellungen':
         return <EinstellungenSeite ausgaben={ausgaben} konten={konten} kategorien={kategorien} kontenReihenfolge={kontenReihenfolge} kategorienReihenfolge={kategorienReihenfolge} onReload={onReload} onAuthChange={handleAuthChange} />;
       default:
