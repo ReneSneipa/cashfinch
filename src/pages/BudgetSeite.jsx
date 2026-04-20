@@ -18,6 +18,7 @@ import { formatBetrag } from '../utils/formatierung.js';
 import {
   berechneGesamteinnahmen,
   berechneGesamtkosten,
+  berechneEffektiveKosten,
   berechneGesamtbudget,
 } from '../utils/berechnungen.js';
 
@@ -161,13 +162,14 @@ const cardStyle = {
 
 // ── Hauptkomponente ───────────────────────────────────────────────────────────
 
-export default function BudgetSeite({ einnahmen, ausgaben, budgets, onReload }) {
+export default function BudgetSeite({ einnahmen, ausgaben, budgets, konten = [], onReload }) {
   const [editId, setEditId] = useState(null);      // ID des aktuell bearbeiteten Budgets
   const [neuOffen, setNeuOffen] = useState(false); // Formular für neues Budget
   const [loeschenId, setLoeschenId] = useState(null); // erste Stufe Löschen-Bestätigung
 
   // Berechnungen
-  const verfuegbar = berechneGesamteinnahmen(einnahmen) - berechneGesamtkosten(ausgaben);
+  const kosten = konten.length > 0 ? berechneEffektiveKosten(ausgaben, konten) : berechneGesamtkosten(ausgaben);
+  const verfuegbar = berechneGesamteinnahmen(einnahmen) - kosten;
   const zugewiesen = berechneGesamtbudget(budgets);
   const nichtZugewiesen = verfuegbar - zugewiesen;
 

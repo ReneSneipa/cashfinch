@@ -121,6 +121,31 @@ export function gruppiereNachKonto(ausgaben) {
 }
 
 /**
+ * Berechnet die effektiven monatlichen Fixkosten unter Beruecksichtigung von Dauerauftraegen.
+ * Fuer Konten MIT Dauerauftrag: Dauerauftrag-Betrag statt berechneter Summe.
+ * Konten MIT Dauerauftrag aber OHNE Ausgaben zaehlen ebenfalls (z.B. Sparkonto).
+ * @param {Array} ausgaben
+ * @param {Array} konten - Konten-Liste mit optionalem dauerauftrag-Feld
+ * @returns {number}
+ */
+export function berechneEffektiveKosten(ausgaben, konten) {
+  const nachKonto = gruppiereNachKonto(ausgaben);
+  let gesamt = 0;
+  nachKonto.forEach((g) => {
+    const konto = konten.find((k) => k.name === g.konto);
+    const da = konto?.dauerauftrag;
+    gesamt += (da && da > 0) ? da : g.summe;
+  });
+  // Konten mit Dauerauftrag aber ohne Ausgaben (z.B. Sparkonto-Ruecklage)
+  konten.forEach((k) => {
+    if (k.dauerauftrag > 0 && !nachKonto.some((g) => g.konto === k.name)) {
+      gesamt += k.dauerauftrag;
+    }
+  });
+  return gesamt;
+}
+
+/**
  * Summiert alle Budget-Beträge.
  * @param {Array} budgets
  * @returns {number}

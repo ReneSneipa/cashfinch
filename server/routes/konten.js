@@ -62,19 +62,55 @@ router.post('/', (req, res) => {
   }
 });
 
-/** PUT /api/konten/:id */
+/** PUT /api/konten/:id – Konto bearbeiten (Name, Dauerauftrag). Kaskadiert Namensaenderungen in alle Ausgaben. */
 router.put('/:id', (req, res) => {
   try {
-    const { name } = req.body;
-    if (!name?.trim()) {
-      return res.status(400).json({ data: null, error: 'Name darf nicht leer sein' });
-    }
     const konten = ladeKonten();
     const idx = konten.findIndex((k) => k.id === req.params.id);
     if (idx === -1) return res.status(404).json({ data: null, error: 'Konto nicht gefunden' });
-    konten[idx] = { ...konten[idx], name: name.trim() };
+
+    const alterName = konten[idx].name;
+
+    // Name-Update (optional)
+    if (req.body.name !== undefined) {
+      if (!req.body.name?.trim()) {
+        return res.status(400).json({ data: null, error: 'Name darf nicht leer sein' });
+      }
+      const neuerName = req.body.name.trim();
+      if (alterName.toLowerCase() !== neuerName.toLowerCase() &&
+          konten.some((k) => k.name.toLowerCase() === neuerName.toLowerCase())) {
+        return res.status(409).json({ data: null, error: `Konto "${neuerName}" existiert bereits` });
+      }
+      konten[idx] = { ...konten[idx], name: neuerName };
+    }
+
+    // Dauerauftrag-Update (optional)
+    if (req.body.dauerauftrag !== undefined) {
+      const da = Number(req.body.dauerauftrag);
+      if (da > 0) {
+        konten[idx] = { ...konten[idx], dauerauftrag: da };
+      } else {
+        // 0, null, NaN → Dauerauftrag entfernen
+        const { dauerauftrag: _removed, ...rest } = konten[idx];
+        konten[idx] = rest;
+      }
+    }
+
     writeFile(FILE, konten);
-    res.json({ data: konten[idx], error: null });
+
+    // Kaskade: alten Namen in allen Ausgaben durch den neuen ersetzen
+    let ausgabenAktualisiert = 0;
+    const neuerName = konten[idx].name;
+    if (alterName !== neuerName) {
+      const ausgaben = readFile(AUSGABEN_FILE);
+      const aktualisiert = ausgaben.map((a) => {
+        if (a.konto === alterName) { ausgabenAktualisiert++; return { ...a, konto: neuerName }; }
+        return a;
+      });
+      if (ausgabenAktualisiert > 0) writeFile(AUSGABEN_FILE, aktualisiert);
+    }
+
+    res.json({ data: { ...konten[idx], ausgabenAktualisiert }, error: null });
   } catch (err) {
     res.status(500).json({ data: null, error: err.message });
   }

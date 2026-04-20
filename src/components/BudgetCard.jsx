@@ -7,6 +7,7 @@ import { formatBetrag } from '../utils/formatierung.js';
 import {
   berechneGesamteinnahmen,
   berechneGesamtkosten,
+  berechneEffektiveKosten,
   berechneGesamtbudget,
 } from '../utils/berechnungen.js';
 
@@ -19,8 +20,9 @@ const cardStyle = {
   overflow: 'hidden',
 };
 
-export default function BudgetCard({ einnahmen, ausgaben, budgets }) {
-  const verfuegbar = berechneGesamteinnahmen(einnahmen) - berechneGesamtkosten(ausgaben);
+export default function BudgetCard({ einnahmen, ausgaben, budgets, konten = [] }) {
+  const kosten = konten.length > 0 ? berechneEffektiveKosten(ausgaben, konten) : berechneGesamtkosten(ausgaben);
+  const verfuegbar = berechneGesamteinnahmen(einnahmen) - kosten;
   const zugewiesen = berechneGesamtbudget(budgets);
   const nichtZugewiesen = verfuegbar - zugewiesen;
 

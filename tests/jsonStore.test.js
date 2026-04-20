@@ -154,12 +154,14 @@ test('migrateDatapfad: funktioniert normal wenn Config lesbar ist', () => {
 
   jsonStore.migrateDatapfad(zielPfad);
 
-  // Im Ziel liegt jetzt die volle Config (mit Salt)
+  // Im Ziel liegt jetzt die volle Config (mit Salt) – aber datenpfad ist
+  // absichtlich LEER, weil datenpfad OS-spezifisch ist und nicht in die
+  // synchronisierte Config gehört (Cross-OS-Sync, v1.4.0).
   const zielConfig = JSON.parse(fs.readFileSync(path.join(zielPfad, 'config.json'), 'utf8'));
   assert.strictEqual(zielConfig.salt, 'xyz');
-  assert.strictEqual(zielConfig.datenpfad, zielPfad);
+  assert.strictEqual(zielConfig.datenpfad, '', 'synced config darf keinen OS-spezifischen Pfad enthalten');
 
-  // Im DEFAULT_DATA_PATH liegt nur noch der Pointer
+  // Im DEFAULT_DATA_PATH liegt nur noch der Pointer – dort steht der Pfad
   const pointer = JSON.parse(fs.readFileSync(path.join(TMP_DATA, 'config.json'), 'utf8'));
   assert.strictEqual(pointer.datenpfad, zielPfad);
   assert.strictEqual(pointer.salt, undefined, 'Pointer darf keinen Salt enthalten');
@@ -173,8 +175,12 @@ test('migrateDatapfad: funktioniert auch ohne bestehende Config (Erstmigration)'
   // Kein writeFileSync – config.json existiert nicht
   jsonStore.migrateDatapfad(zielPfad);
 
+  // Synced Ziel-Config hat datenpfad='' (Cross-OS-Sync), Pointer hat den Pfad
   const zielConfig = JSON.parse(fs.readFileSync(path.join(zielPfad, 'config.json'), 'utf8'));
-  assert.strictEqual(zielConfig.datenpfad, zielPfad);
+  assert.strictEqual(zielConfig.datenpfad, '', 'synced config darf keinen OS-spezifischen Pfad enthalten');
+
+  const pointer = JSON.parse(fs.readFileSync(path.join(TMP_DATA, 'config.json'), 'utf8'));
+  assert.strictEqual(pointer.datenpfad, zielPfad, 'Pointer enthält den tatsächlichen Pfad');
 });
 
 test('readConfig: gibt Defaults zurück wenn keine Config existiert', () => {

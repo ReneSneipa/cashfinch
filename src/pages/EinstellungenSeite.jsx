@@ -398,6 +398,8 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
   const [fehler, setFehler] = useState(null);
   const [loeschenId, setLoeschenId] = useState(null);
   const [loeschFehler, setLoeschFehler] = useState({});
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState('');
 
   // Props synchronisieren wenn übergeordnete Komponente neue Daten liefert (z.B. nach onReload)
   useEffect(() => { setKonten(initialKonten); }, [initialKonten]);
@@ -429,6 +431,24 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
     if (res.error) { setFehler(res.error); return; }
     setKonten((prev) => [...prev, res.data]);
     setNeuerName('');
+    onSaved();
+  };
+
+  const handleRename = async (id) => {
+    const trimmed = editName.trim();
+    if (!trimmed) { setEditId(null); return; }
+    const konto = konten.find((k) => k.id === id);
+    if (konto && konto.name === trimmed) { setEditId(null); return; }
+    const res = await kontenApi.update(id, { name: trimmed });
+    if (res.error) { setFehler(res.error); setEditId(null); return; }
+    const alterName = konto.name;
+    setKonten((prev) => prev.map((k) => k.id === id ? { ...k, name: trimmed } : k));
+    setListe((prev) => prev.map((n) => n === alterName ? trimmed : n));
+    // Reihenfolge in config.json mit neuem Namen speichern
+    const neueListe = liste.map((n) => n === alterName ? trimmed : n);
+    await einstellungenApi.save({ kontenReihenfolge: neueListe });
+    setEditId(null);
+    setFehler(null);
     onSaved();
   };
 
@@ -493,7 +513,7 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
         </button>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
-        Konten anlegen, löschen und per Drag & Drop sortieren. Die Reihenfolge steuert die Standard-Sortierung in der Dashboard-Tabelle.
+        Konten anlegen, löschen und per Drag & Drop sortieren. Doppelklick auf einen Namen zum Umbenennen. Die Reihenfolge steuert die Standard-Sortierung in der Dashboard-Tabelle.
       </div>
 
       {/* Liste */}
@@ -528,7 +548,28 @@ function KontenVerwaltungKarte({ konten: initialKonten, initialReihenfolge, onSa
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 4, padding: '1px 6px', minWidth: 20, textAlign: 'center', flexShrink: 0,
                 }}>{i + 1}</span>
-                <span style={{ fontSize: 13, fontWeight: 500, flex: 1 }}>{name}</span>
+                {editId === konto.id ? (
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRename(konto.id);
+                      if (e.key === 'Escape') setEditId(null);
+                    }}
+                    onBlur={() => handleRename(konto.id)}
+                    style={{
+                      ...inputStyle, flex: 1, fontSize: 13, fontWeight: 500,
+                      padding: '2px 8px', margin: 0,
+                    }}
+                  />
+                ) : (
+                  <span
+                    onDoubleClick={() => { setEditId(konto.id); setEditName(name); setFehler(null); }}
+                    title="Doppelklick zum Umbenennen"
+                    style={{ fontSize: 13, fontWeight: 500, flex: 1, cursor: 'text' }}
+                  >{name}</span>
+                )}
                 <button
                   onClick={() => { setLoeschenId(bestaetigen ? null : konto.id); setLoeschFehler({}); }}
                   title={bestaetigen ? 'Abbrechen' : 'Konto löschen'}
@@ -613,6 +654,8 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
   const [fehler, setFehler] = useState(null);
   const [loeschenId, setLoeschenId] = useState(null);
   const [loeschFehler, setLoeschFehler] = useState({});
+  const [editId, setEditId] = useState(null);
+  const [editName, setEditName] = useState('');
 
   // Props synchronisieren wenn übergeordnete Komponente neue Daten liefert (z.B. nach onReload)
   useEffect(() => { setKategorien(initialKategorien); }, [initialKategorien]);
@@ -646,6 +689,29 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
     setNeuerName('');
     setNeueFarbe('#636366');
     onSaved();
+  };
+
+  const handleRename = async (id) => {
+    const trimmed = editName.trim();
+    if (!trimmed) { setEditId(null); return; }
+    const kat = kategorien.find((k) => k.id === id);
+    if (kat && kat.name === trimmed) { setEditId(null); return; }
+    const res = await kategorienApi.update(id, { name: trimmed });
+    if (res.error) { setFehler(res.error); setEditId(null); return; }
+    const alterName = kat.name;
+    setKategorien((prev) => prev.map((k) => k.id === id ? { ...k, name: trimmed } : k));
+    setListe((prev) => prev.map((n) => n === alterName ? trimmed : n));
+    const neueListe = liste.map((n) => n === alterName ? trimmed : n);
+    await einstellungenApi.save({ kategorienReihenfolge: neueListe });
+    setEditId(null);
+    setFehler(null);
+    onSaved();
+  };
+
+  const handleFarbeAendern = async (id, neueFarbe) => {
+    const res = await kategorienApi.update(id, { farbe: neueFarbe });
+    if (res.error) return;
+    setKategorien((prev) => prev.map((k) => k.id === id ? { ...k, farbe: neueFarbe } : k));
   };
 
   // mitAusgaben=true: Force-Delete – löscht auch alle Ausgaben die die Kategorie verwenden
@@ -709,7 +775,7 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
         </button>
       </div>
       <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
-        Kategorien anlegen, löschen und per Drag & Drop sortieren. Die Reihenfolge steuert die Darstellung im Tortendiagramm.
+        Kategorien anlegen, löschen und per Drag & Drop sortieren. Doppelklick auf Namen zum Umbenennen, auf den Farbpunkt zum Farbe ändern. Die Reihenfolge steuert die Darstellung im Tortendiagramm.
       </div>
 
       {/* Liste */}
@@ -746,19 +812,48 @@ function KategorienVerwaltungKarte({ kategorien: initialKategorien, initialReihe
                   background: 'var(--surface)', border: '1px solid var(--border)',
                   borderRadius: 4, padding: '1px 6px', minWidth: 20, textAlign: 'center', flexShrink: 0,
                 }}>{i + 1}</span>
-                {/* Farbpunkt */}
-                <div style={{
-                  width: 12, height: 12, borderRadius: '50%',
-                  background: kat.farbe, flexShrink: 0,
-                }} />
+                {/* Farbpunkt mit Picker */}
+                <label title="Farbe ändern" style={{ flexShrink: 0, cursor: 'pointer', position: 'relative' }}>
+                  <div style={{
+                    width: 12, height: 12, borderRadius: '50%',
+                    background: kat.farbe,
+                  }} />
+                  <input
+                    type="color"
+                    value={kat.farbe}
+                    onChange={(e) => handleFarbeAendern(kat.id, e.target.value)}
+                    style={{ position: 'absolute', top: 0, left: 0, width: 12, height: 12, opacity: 0, cursor: 'pointer' }}
+                  />
+                </label>
                 {/* Name-Badge */}
-                <span style={{
-                  display: 'inline-flex', padding: '2px 8px',
-                  borderRadius: 5, fontSize: 11, fontWeight: 500,
-                  background: bg, color: kat.farbe, flex: 1,
-                }}>
-                  {kat.name}
-                </span>
+                {editId === kat.id ? (
+                  <input
+                    autoFocus
+                    value={editName}
+                    onChange={(e) => setEditName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') handleRename(kat.id);
+                      if (e.key === 'Escape') setEditId(null);
+                    }}
+                    onBlur={() => handleRename(kat.id)}
+                    style={{
+                      ...inputStyle, flex: 1, fontSize: 11, fontWeight: 500,
+                      padding: '2px 8px', margin: 0,
+                    }}
+                  />
+                ) : (
+                  <span
+                    onDoubleClick={() => { setEditId(kat.id); setEditName(kat.name); setFehler(null); }}
+                    title="Doppelklick zum Umbenennen"
+                    style={{
+                      display: 'inline-flex', padding: '2px 8px',
+                      borderRadius: 5, fontSize: 11, fontWeight: 500,
+                      background: bg, color: kat.farbe, flex: 1, cursor: 'text',
+                    }}
+                  >
+                    {kat.name}
+                  </span>
+                )}
                 {/* Farb-Hex */}
                 <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'monospace', flexShrink: 0 }}>
                   {kat.farbe}
